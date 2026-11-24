@@ -45,6 +45,21 @@ Each stage is independently executable. Generated assets are preserved in `outpu
 
 If an asset's inputs change, only that asset and its downstream dependencies should be regenerated. Failed generations must not replace previously successful outputs.
 
+### Execution environments
+
+Each stage uses the interface and environment prescribed by the assessment:
+
+| Stage | Interface / environment |
+| --- | --- |
+| Script | Gemini API |
+| Narration | Gemini API (TTS) |
+| Keyframes | Cloudflare Workers AI |
+| Moving shots | Wan 2.2 on Kaggle or Colab |
+| Music | ACE-Step 1.5 on Kaggle or Colab |
+| Assembly | Local FFmpeg |
+
+The pipeline calls these hosted APIs and notebooks directly. It does not introduce custom model-serving infrastructure or additional deployment layers.
+
 ## 4. Development approach
 
 Development begins with a three-shot test storyboard. This is a testing fixture, not a limit on the final film.
