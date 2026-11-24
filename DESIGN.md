@@ -11,9 +11,9 @@ The pipeline uses a validated `storyboard.json` as its shared contract. Each sta
 ## 2. Design decisions
 
 - **Shared storyboard:** One JSON file describes the film and its shots. A JSON Schema validates it before pipeline execution.
-- **Independent shots:** Each shot has its own duration, keyframe prompt, motion prompt, narration line and English subtitle.
-- **Consistent visuals:** Character references and visual style instructions are defined at film level and reused across shots.
-- **Single soundtrack:** One original music cue is generated for the entire film.
+- **Independent shots:** Each shot has its own duration, keyframe prompt, motion prompt, narration line, English subtitle and music cue.
+- **Consistent visuals:** A style block and a character description are defined at film level and repeated in every keyframe prompt. The documented keyframe API (`flux-1-schnell`) has no seed and no reference-image input, so consistency is tested through user tests and EXPERIMENTS.md, not guaranteed. The generated reference sheet is a human golden reference only.
+- **Single soundtrack:** One original score is generated for the entire film, from a cue sheet built from the per-shot music cues (`music_cue`) in `storyboard.json`: the film-level music prompt followed by each shot's cue at its start and end time.
 - **Reusable assets:** Each output has a fingerprint of its relevant inputs. Unchanged outputs are reused; changed inputs trigger regeneration only where necessary.
 - **Shared source footage:** Shots are generated once. Both aspect ratios are produced during final assembly.
 - **Incremental development:** Pipeline stages are tested independently before running the complete production.
@@ -75,4 +75,23 @@ Each stage will be implemented and tested separately:
 
 The complete film will be produced only after the individual stages have been tested.
 
-The implementation will prioritize the assessment requirements and avoid unnecessary infrastructure or abstractions.# DESIGN
+The implementation will prioritize the assessment requirements and avoid unnecessary infrastructure or abstractions.
+
+## 5. Audience, intent and user tests
+
+*To be written by the filmmaker before generating anything (assessment: audience and intent first).*
+
+- **Who will watch, and where:**
+- **What they should feel or understand at the end:**
+- **Why each shot exists:** every shot has a `reason` in `storyboard.json`.
+
+### User test 1: the radio cut (at least three people from the audience)
+
+Narration over a black screen (`python -m pipeline.assemble --radio`).
+What they said:
+What changed in `storyboard.json` because of it:
+
+### User test 2: the near-final cut (at least three people)
+
+What they said:
+What changed because of it:

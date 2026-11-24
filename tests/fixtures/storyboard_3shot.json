@@ -1,0 +1,22 @@
+{
+  "title": "Test film",
+  "brief": {"premise": "A grandmother walks to the market.", "audience": "Family abroad", "intent": "Feel close to home"},
+  "language": "English",
+  "voice": "Kore",
+  "seed": 42,
+  "style": "warm, grainy, hand-painted",
+  "character": {"name": "Almaz", "description": "an elderly woman in a white shawl"},
+  "music": {"prompt": "calm acoustic strings, slow tempo"},
+  "end_card": "Made with AI",
+  "shots": [
+    {"id": "s01", "duration": 4.5, "reason": "Establish the village at dawn.",
+     "keyframe_prompt": "a quiet village road at dawn", "motion_prompt": "slow push in",
+     "narration": "Every morning she walked to the market.", "subtitle": "Every morning she walked to the market.", "music_cue": "soft strings enter"},
+    {"id": "s02", "duration": 4.0, "reason": "Introduce the character.",
+     "keyframe_prompt": "Almaz carrying a basket", "motion_prompt": "gentle pan right",
+     "narration": "She carried everything she had.", "subtitle": "She carried everything she had.", "music_cue": "gentle melody walks"},
+    {"id": "s03", "duration": 5.0, "reason": "Resolve with the market.",
+     "keyframe_prompt": "a busy market stall", "motion_prompt": "slow zoom out",
+     "narration": "And the market always welcomed her.", "subtitle": "And the market always welcomed her.", "music_cue": "warm swell, resolve"}
+  ]
+}

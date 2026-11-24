@@ -1,1 +1,11 @@
 .env
+.venv/
+__pycache__/
+.pytest_cache/
+.DS_Store
+.*.tmp-*
+storyboard.json.bak-*
+# Private by default: the outputs are your family's media. To submit some as evidence, review them, then
+# `git add -f outputs/<what you choose>`. (runs.jsonl is tracked: review `git diff runs.jsonl` before each commit.)
+outputs/*
+!outputs/.gitkeep

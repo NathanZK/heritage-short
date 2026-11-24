@@ -1,1 +1,72 @@
-{"$schema": "https://json-schema.org/draft/2020-12/schema", "title": "Storyboard", "type": "object"}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Storyboard",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "language", "voice", "style", "character", "music", "shots"],
+  "properties": {
+    "title": {"type": "string", "minLength": 1, "maxLength": 120},
+    "brief": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["premise", "audience", "intent"],
+      "properties": {
+        "premise": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "audience": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "intent": {"type": "string", "minLength": 1, "maxLength": 1000}
+      }
+    },
+    "language": {"type": "string", "minLength": 1, "maxLength": 40},
+    "voice": {"enum": ["Zephyr", "Puck", "Charon", "Kore", "Fenrir", "Leda", "Orus", "Aoede", "Callirrhoe", "Autonoe",
+      "Enceladus", "Iapetus", "Umbriel", "Algieba", "Despina", "Erinome", "Algenib", "Rasalgethi", "Laomedeia",
+      "Achernar", "Alnilam", "Schedar", "Gacrux", "Pulcherrima", "Achird", "Zubenelgenubi", "Vindemiatrix",
+      "Sadachbia", "Sadaltager", "Sulafat"]},
+    "seed": {"type": "integer", "minimum": 0},
+    "style": {"type": "string", "minLength": 1, "maxLength": 500},
+    "character": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "description"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "maxLength": 80},
+        "description": {"type": "string", "minLength": 1, "maxLength": 1000}
+      }
+    },
+    "music": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prompt"],
+      "properties": {
+        "prompt": {"type": "string", "minLength": 1, "maxLength": 500},
+        "choice": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["candidate", "reason"],
+          "properties": {
+            "candidate": {"type": "integer", "minimum": 1, "maximum": 3},
+            "reason": {"type": "string", "minLength": 1, "maxLength": 500}
+          }
+        }
+      }
+    },
+    "end_card": {"type": "string", "minLength": 1, "maxLength": 60},
+    "shots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "duration", "reason", "keyframe_prompt", "motion_prompt", "narration", "subtitle", "music_cue"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9_-]{1,32}$"},
+          "duration": {"type": "number", "exclusiveMinimum": 0, "maximum": 8},
+          "reason": {"type": "string", "minLength": 1, "maxLength": 300},
+          "keyframe_prompt": {"type": "string", "minLength": 1, "maxLength": 1000},
+          "motion_prompt": {"type": "string", "minLength": 1, "maxLength": 500},
+          "narration": {"type": "string", "minLength": 1, "maxLength": 400},
+          "subtitle": {"type": "string", "minLength": 1, "maxLength": 200},
+          "music_cue": {"type": "string", "minLength": 1, "maxLength": 80}
+        }
+      }
+    }
+  }
+}

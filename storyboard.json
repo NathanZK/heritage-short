@@ -1,1 +1,19 @@
-{"title": "heritage-short", "shots": []}
+{
+  "title": "TODO: film title",
+  "brief": {
+    "premise": "TODO: the person, place or story this film is about",
+    "audience": "TODO: who will watch it, and where",
+    "intent": "TODO: what they should feel or understand at the end"
+  },
+  "language": "English",
+  "voice": "Kore",
+  "seed": 42,
+  "style": "TODO: a fixed style block added to every image prompt, e.g. warm, grainy, hand-painted",
+  "character": {
+    "name": "TODO",
+    "description": "TODO: a fixed description of the main character, added to every image prompt"
+  },
+  "music": {"prompt": "TODO: describe the instrumental score"},
+  "end_card": "Made with AI",
+  "shots": []
+}
