@@ -180,6 +180,27 @@ def test_music_main_names_candidates_in_returned_order(tmp_path):
     assert (work / "candidate_1.wav").read_bytes() != (work / "candidate_2.wav").read_bytes()
 
 
+def test_music_runner_uses_a_non_interactive_matplotlib_backend(tmp_path, monkeypatch):
+    """Kaggle sets MPLBACKEND to the Jupyter inline backend, which ACE-Step's import of matplotlib rejects
+    (seen in the owner's ace-step-music-test notebook); the runner must get Agg, and keep the rest of the env."""
+    monkeypatch.setenv("MPLBACKEND", "module://matplotlib_inline.backend_inline")
+    monkeypatch.setenv("HERITAGE_KEEP_ME", "1")
+    module = configured("music", ids=("candidate_1", "candidate_2", "candidate_3"))
+    inputs = tmp_path / "in" / "ds"
+    inputs.mkdir(parents=True)
+    (inputs / "job.json").write_text(json.dumps(music_job()))
+    seen = {}
+
+    def run(cmd, cwd=None, env=None, **kw):
+        if cmd[:5] == UV_RUN:
+            seen.update(env or {})
+        return type("R", (), {"returncode": 1})()
+
+    module.main(root=tmp_path / "in", work=tmp_path / "work", scratch=tmp_path / "scratch", run=run,
+                sleep=lambda s: None, install=False)
+    assert seen.get("MPLBACKEND") == "Agg" and seen.get("HERITAGE_KEEP_ME") == "1"
+
+
 class Done:
     returncode = 0
 

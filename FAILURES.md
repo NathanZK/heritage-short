@@ -36,3 +36,10 @@ documentation before writing any integration (2026-11-25). Real run failures get
 13. **`gemini-3.8-flash` over capacity (first real script run, 2026-11-25).** Three attempts: two 120 s timeouts and
     one HTTP 503 "experiencing high demand"; the stage wrote nothing. *Did:* switched the default text model to
     `gemini-3.5-flash-lite`, which drafted on the first attempt; Flash stays selectable (`EXPERIMENTS.md` E2, issue #6).
+14. **ACE-Step import failed in a Kaggle notebook (owner's `ace-step-music-test`, 2026-11-24; from that notebook's
+    saved output).** Kaggle sets `MPLBACKEND=module://matplotlib_inline.backend_inline`; ACE-Step imports matplotlib
+    (via torchmetrics, per the traceback), which rejected it with a `ValueError`. With `MPLBACKEND=Agg` the same
+    session loaded ACE-Step 1.5 on a T4 and generated audio. *Did:* the music kernel runs ACE-Step with
+    `MPLBACKEND=Agg` (regression test in `tests/test_kernels.py`). The first pipeline music job (2026-11-25) then ran
+    without the error; whether Kaggle sets the same variable for batch script kernels was not checked, since the fix
+    makes it irrelevant.

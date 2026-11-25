@@ -18,7 +18,11 @@
     "reference_image": "assets/character_reference.jpg"
   },
   "music": {
-    "prompt": "gentle solo krar and soft hand percussion, slow, warm and hopeful"
+    "prompt": "gentle solo krar and soft hand percussion, slow, warm and hopeful",
+    "choice": {
+      "candidate": 3,
+      "reason": "Preferred by the filmmaker after listening: its musical character best suits the film (seed 44)."
+    }
   },
   "end_card": "Made with AI",
   "shots": [
