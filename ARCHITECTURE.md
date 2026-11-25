@@ -12,7 +12,7 @@ the code differs from it, the code and this document govern, and every differenc
 | script | `brief`, `target_seconds`, style, character | `shots` in `storyboard.json` | Gemini `gemini-3.5-flash-lite` (default) or `gemini-3.8-flash` (`text_model`) |
 | keyframes | style, character (and `reference_image`), shot prompts | `outputs/keyframes/<id>.jpg` (and `reference.jpg` without a reference image) | Cloudflare `flux-2-klein-4b` (default) or `flux-1-schnell` |
 | narration | shot narration, voice | `outputs/narration/<id>.wav`, `subtitles.srt` | Gemini `gemini-3.8-flash-tts` |
-| shots | keyframes, motion prompts | `outputs/shots/<id>.mp4` + sidecar | Kaggle, Wan 2.2 TI2V-5B |
+| shots | keyframes, motion prompts | `outputs/shots/<id>.mp4` + sidecar | Kaggle, Wan 2.2 TI2V-5B; the film uses the FFmpeg fallback (below) |
 | music | music prompt, per-shot `music_cue`s and their times, film length | three candidates, then `score.wav` | Kaggle, ACE-Step 1.5 |
 | assemble | all of the above | `outputs/final/*` | local FFmpeg |
 
@@ -98,11 +98,19 @@ asks ACE-Step for the music's shape, and ACE-Step does not guarantee it.
 `kind: fallback`, the shots stage and the assembly both name these shots on every run, and they are not submitted to
 Kaggle again unless you pass `--retry-fallbacks` (so an unchanged re-run costs no GPU time).
 
+**Production decision:** the assessment film uses these fallback clips for every shot, and the music stage's cached,
+chosen score (candidate 3) rather than new Kaggle generation. Reasons and measurements: `EXPERIMENTS.md`, E4, E5 and
+"Production decision".
+
 ## Known limits
 
 - `flux-1-schnell` has no seed and no reference image. `flux-2-klein-4b` takes both, but consistency is still not
   guaranteed, and keyframes are not reproducible by re-generation (reproducibility comes from cached outputs).
-- Wan on a Kaggle T4 is unverified; `--fallback` makes pan-and-zoom clips instead, clearly marked and retried later.
+- The Wan kernel cannot run on a Kaggle T4 (FAILURES 15). Diffusers can run Wan 2.2 TI2V-5B there: one 3.4 s, 480p clip
+  took about 40 GPU-session minutes, about 32 of them generating (`EXPERIMENTS.md` E5). The film therefore uses
+  `--fallback` pan-and-zoom clips.
+- `--fallback` only falls back after the Kaggle job fails to deliver, so it still submits the Wan kernel first;
+  set `KAGGLE_USERNAME` to empty for the shots command to fall back without any Kaggle call.
 - Landscape clips are centre-cropped to 9:16: side content is lost.
 - Subtitles and end card are PNG overlays (the stock FFmpeg lacks `subtitles` and `drawtext`); Latin text only.
 - Cuts are not beat-snapped; the score's shape comes only from the cue sheet in the caption.

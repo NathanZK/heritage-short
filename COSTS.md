@@ -8,7 +8,9 @@ Measured values only. Rows are filled as stages are measured; fill the rest from
 | script | | | n/a | | |
 | keyframes | | | n/a | | |
 | narration | | | n/a | | |
-| shots (Wan 2.2) | | | | | |
+| shots (Wan 2.2, pipeline kernel) | not run (cannot run on a T4; FAILURES 15) | | | | |
+| shots (Wan 2.2 Diffusers experiment, E5; 1 clip, outside the pipeline) | 1 Kaggle run | 2415.2 in the notebook: denoising 1501.9 (50 × 30.04), VAE decode 410.8, VAE encode 5.0, export 4.2, setup 476.9, other about 16 | not recorded separately | Kaggle GPU quota 0.38 h → 1.05 h (`kaggle quota`; about 0.67 h) | n/a (no GPU list price assumed) |
+| shots (production: FFmpeg fallback) | local, no model call | not yet measured | n/a | n/a | n/a |
 | music (ACE-Step) | 1 Kaggle run, 1 batch call (3 candidates) | 99.1 runner; about 215 end to end | 99.1 (runner time, recorded by the kernel; excludes pip, git clone and `uv sync`, and is repeated on each of the 3 candidate lines in `runs.jsonl`, so do not sum it) | Kaggle GPU quota 0.33 h → 0.38 h (`kaggle quota`; about 0.05 h) | n/a (no GPU list price assumed) |
 | assemble | n/a | | n/a | n/a | n/a |
 

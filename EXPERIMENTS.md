@@ -97,11 +97,72 @@ One entry per experiment: hypothesis, change, result. Aim for about ten. Back ev
 - **Decision:** the filmmaker listened and chose candidate 3 (seed 44); `score.wav` is a byte-identical copy. Its
   silence from 15.7 s covers most of the 3 s end card.
 
+### E5: Wan 2.2 TI2V-5B image-to-video with Diffusers on one Kaggle T4
+- **Hypothesis:** the pipeline's Wan kernel cannot run on a T4 (FAILURES 15), but Hugging Face Diffusers'
+  `WanImageToVideoPipeline`, which uses PyTorch SDPA instead of FlashAttention, can turn the s01 keyframe into a
+  usable moving shot on a 16 GB T4 when the video model runs in float16.
+- **Change:** a standalone private Kaggle script (`heritage-short-wan-diffusers-t4` v1, pushed 2026-11-25T22:12:19Z,
+  hard limit 5400 s), outside the pipeline.
+  - Model: `Wan-AI/Wan2.2-TI2V-5B-Diffusers` (Apache 2.0).
+  - Video model float16 with block-level group offloading (1 block per group, no streams); UMT5 text encoder bfloat16
+    on CPU, used once and freed; VAE float32 on the GPU, tiled.
+  - Input: `outputs/keyframes/s01.jpg` centre-cropped from 1280×704 to 1220×704, then resized to 832×480.
+  - Prompt: s01's `motion_prompt`; Wan's default negative prompt; seed 661535228 (s01's shot seed).
+  - 832×480, 81 frames, 24 fps, 50 steps, guidance 5.0; scheduler from the checkpoint (UniPC, flow shift 5.0).
+  - Software (kernel log): Python 3.13.16, torch 2.11.0+cu130, diffusers 0.43.0, transformers 5.20.2.
+- **Result (measured):** status ok, first attempt; no NaN or Inf in the latents over 50 steps.
+  - Time: 2415.2 s in the notebook. Environment 33.7 s; download 140.2 s (31.85 GiB); text encoding on CPU
+    211.9 s; model load 91.1 s; denoising 1501.9 s (30.04 s per step, 27.9–36.1 s); VAE decode 410.8 s; VAE
+    encode 5.0 s; export 4.2 s.
+  - Memory: peak 7141 MiB on GPU0 (nvidia-smi; PyTorch 5.05 GiB allocated, 6.83 GiB reserved); GPU1 unused. Host RAM
+    peak 25,635 MiB used of 31.3 GiB (process 24,942 MiB).
+  - Quota: Kaggle GPU 0.38 h → 1.05 h (`kaggle quota`).
+  - Clip: H.264, 832×480, 24 fps, 81 frames, 3.375 s; decodes cleanly. First frame against the cropped input: PSNR
+    34.2 dB; last frame: 12.6 dB. Mean frame-to-frame difference 0.024 (maximum 0.071), no jumps. Mean brightness
+    0.43 in the first frame and 0.36 in the last (measured locally from `frame_first.png` and `frame_last.png`).
+- **Observed (from sampled frames; not yet judged by the filmmaker):** a slow push-in, rising smoke, flickering
+  flames and a stirring spoon; the same face, netela and earring throughout. The background changes after the first
+  frame (the sun and hills recede). A small detached flame appears in the smoke at the end, and the last frames are
+  darker and more orange.
+- **Not logged in `runs.jsonl`:** it ran outside the pipeline. Evidence: `outputs/experiments/wan-diffusers-t4/`
+  (git-ignored: clip, `experiment.json`, Kaggle log, sampled frames, `summary.json`, quota readings, the script).
+- **Conclusion:** Wan 2.2 TI2V-5B can make a coherent moving shot from a Klein keyframe on a free T4, but one 3.4 s
+  clip at 480p took about 32 min of generation plus about 8 min of setup in the same GPU session.
+- **Decision:** see "Production decision" below.
+
+## Production decision (2026-11-26)
+
+E4 and E5 show that real music and real moving shots are technically feasible on Kaggle's free T4s. Neither is used
+in the assessment film's production workflow:
+
+- **Moving shots: the FFmpeg pan-and-zoom fallback.**
+  - The pipeline's Wan kernel cannot run on a T4 (FAILURES 15); using Wan would mean replacing it with the E5
+    Diffusers setup.
+  - The E5 cost, measured for one 3.4 s, 480p clip, is about 32 min of generation plus about 8 min of setup in the
+    same GPU session (0.67 h of quota). Three such clips in one session would take about 1.7 GPU hours
+    (3 × 32 + 8 min; estimate). The storyboard's shots are 5 s, which needs about 121 frames, so real shots would
+    cost more at any resolution (estimate; not measured).
+  - Every regeneration also needs a Kaggle account, the CLI, quota and a session of 40 min or more.
+  - The fallback is local, needs no GPU and is what the brief offers when video generation is impractical. It shows
+    the Klein keyframes with a slow pan-and-zoom; the clips are marked `kind: fallback`.
+- **Music: the score already chosen.** Production uses `outputs/music/score.wav`, the filmmaker's choice of candidate
+  3 from E4 (`music.choice` in `storyboard.json`; sha256 `64422849…a631a`).
+  - The music stage treats it as current and makes no Kaggle call while the candidates stay unchanged.
+  - Regenerating would need Kaggle again and would produce different candidates, which would need a new listening
+    choice.
+  - `outputs/` is git-ignored, so the score exists only in this working copy; a clean clone would have to run the
+    music stage on Kaggle (or be given the file).
+- **Known gap:** `--fallback` still submits the Wan kernel to Kaggle first and only falls back when Kaggle does not
+  deliver (`pipeline/shots.py`). Until there is a fallback-only option, run the shots stage with `KAGGLE_USERNAME`
+  set to empty for that command, so the stage stops before any Kaggle call and falls back
+  (`KAGGLE_USERNAME= python -m pipeline.shots --fallback`). This was checked on a scratch copy: no Kaggle CLI call,
+  three `kind: fallback` clips.
+
 ## Ideas worth testing
 
 - Does repeating the character description in every keyframe prompt keep the character recognisable?
   (Answered for FLUX.2 [klein] 4B with a reference image in E3; FLUX.1 schnell, which takes no seed or reference
   image, drifted.)
-- Wan on a Kaggle T4: does the documented command run, and how long does one shot take?
+- Wan on a Kaggle T4: answered. The documented command cannot run there (FAILURES 15); Diffusers can, slowly (E5).
 - Three ACE-Step candidates: which one fits the narration, and why?
 - Gemini TTS: Amharic versus English narration quality and pacing.
