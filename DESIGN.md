@@ -12,7 +12,7 @@ The pipeline uses a validated `storyboard.json` as its shared contract. Each sta
 
 - **Shared storyboard:** One JSON file describes the film and its shots. A JSON Schema validates it before pipeline execution.
 - **Independent shots:** Each shot has its own duration, keyframe prompt, motion prompt, narration line, English subtitle and music cue.
-- **Consistent visuals:** A style block and a character description are defined at film level and repeated in every keyframe prompt. The documented keyframe API (`flux-1-schnell`) has no seed and no reference-image input, so consistency is tested through user tests and EXPERIMENTS.md, not guaranteed. The generated reference sheet is a human golden reference only.
+- **Consistent visuals:** A style block and a character description are defined at film level and repeated in every keyframe prompt. The default keyframe model, `flux-2-klein-4b`, also conditions every shot keyframe on an approved character image (`character.reference_image`) and takes a per-shot seed; `flux-1-schnell` has neither. Consistency is tested through user tests and EXPERIMENTS.md, not guaranteed. A generated reference sheet, made only when there is no reference image, is a human golden reference only.
 - **Single soundtrack:** One original score is generated for the entire film, from a cue sheet built from the per-shot music cues (`music_cue`) in `storyboard.json`: the film-level music prompt followed by each shot's cue at its start and end time.
 - **Reusable assets:** Each output has a fingerprint of its relevant inputs. Unchanged outputs are reused; changed inputs trigger regeneration only where necessary.
 - **Shared source footage:** Shots are generated once. Both aspect ratios are produced during final assembly.

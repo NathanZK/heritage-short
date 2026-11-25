@@ -16,6 +16,7 @@ import time
 import wave
 import zlib
 from dataclasses import dataclass, field
+from typing import NamedTuple
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -30,6 +31,12 @@ RETRY_DELAYS = (2, 4)
 FPS = 24
 DEFAULT_SEED = 42
 DEFAULT_END_CARD = "Made with AI"
+
+
+class Generated(NamedTuple):
+    """An image model's output and the usage the provider reported for it (None when not reported)."""
+    image: bytes
+    neurons: float | None = None
 
 
 class StoryboardError(Exception):
@@ -118,7 +125,10 @@ def redact(text: str) -> str:
 # ------------------------------------------------------------------- storyboard
 
 def composed_keyframe_prompt(sb: dict, shot: dict) -> str:
-    return f"{sb['style']}. {sb['character']['description']}. {shot['keyframe_prompt']}"
+    c = sb["character"]
+    if c.get("reference_image"):    # the reference image goes to the model as image 0
+        return f"{c['name']} is the person in image 0 ({c['description']}). {shot['keyframe_prompt']}. Style: {sb['style']}."
+    return f"{sb['style']}. {c['description']}. {shot['keyframe_prompt']}"
 
 
 def music_caption(sb: dict) -> str:
@@ -375,8 +385,9 @@ def model_record(*, stage, shot, provider, model, params, seed, attempt=1, statu
 
 
 def call_model(ctx: Ctx, *, stage: str, shot, provider: str, model: str, params: dict, seed, fn,
-               list_price_usd=None):
-    """Run one model call: 3 attempts, delays 2 s then 4 s, one runs.jsonl line per attempt."""
+               list_price_usd=None, usage=None):
+    """Run one model call: 3 attempts, delays 2 s then 4 s, one runs.jsonl line per attempt. `usage(result)`
+    returns extra fields for the ok line, such as the neurons the provider reported."""
     attempts = len(RETRY_DELAYS) + 1
     for attempt in range(1, attempts + 1):
         start = time.monotonic()
@@ -391,7 +402,8 @@ def call_model(ctx: Ctx, *, stage: str, shot, provider: str, model: str, params:
                 raise
             ctx.sleep(RETRY_DELAYS[attempt - 1])
         else:
-            log_run(ctx, **base, status="ok", latency_s=round(time.monotonic() - start, 3))
+            log_run(ctx, **{**base, "status": "ok", "latency_s": round(time.monotonic() - start, 3),
+                            **(usage(result) if usage else {})})
             return result
 
 

@@ -8,6 +8,10 @@
     "title": {"type": "string", "minLength": 1, "maxLength": 120},
     "target_seconds": {"type": "number", "minimum": 4,
       "description": "intended film length in seconds, including the 3 s end card; the script stage drafts shots from it"},
+    "text_model": {"enum": ["gemini-3.5-flash-lite", "gemini-3.8-flash"],
+      "description": "Gemini text model for the script stage; gemini-3.5-flash-lite (default)"},
+    "keyframe_model": {"enum": ["flux-2-klein-4b", "flux-1-schnell"],
+      "description": "keyframe image model; flux-2-klein-4b (default) can take character.reference_image"},
     "assessment_rules": {"type": "boolean",
       "description": "true: enforce the 10 Academy rules (8-12 shots, 60-90 s including the end card)"},
     "brief": {
@@ -33,7 +37,9 @@
       "required": ["name", "description"],
       "properties": {
         "name": {"type": "string", "minLength": 1, "maxLength": 80},
-        "description": {"type": "string", "minLength": 1, "maxLength": 1000}
+        "description": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "reference_image": {"type": "string", "minLength": 1, "maxLength": 300,
+          "description": "path, relative to the repository root, of an approved image of the character; flux-2-klein-4b conditions every shot keyframe on it"}
       }
     },
     "music": {

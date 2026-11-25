@@ -23,6 +23,14 @@ SHOTS_SCHEMA = {
     "required": ["shots"],
 }
 
+TEXT_MODELS = {"gemini-3.5-flash-lite": "TEXT_MODEL", "gemini-3.8-flash": "TEXT_MODEL_FLASH"}  # storyboard text_model
+
+
+def text_model_id(ctx, sb: dict) -> str:
+    """The provider's id for the storyboard's text_model (default gemini-3.5-flash-lite)."""
+    return getattr(ctx.provider, TEXT_MODELS[sb.get("text_model", "gemini-3.5-flash-lite")])
+
+
 CLIP_SECONDS = 5        # Wan's clip is about 5 s: the length a planned shot aims for
 MAX_SHOT_SECONDS = 8    # the schema's limit on shots[].duration
 MIN_CUE = 8             # characters: below this a music cue says nothing
@@ -134,12 +142,12 @@ def run(ctx, sb, args) -> int:
     if not brief or (not ctx.mock and brief["premise"].startswith("TODO")):
         raise PipelineExit(1, "fill in 'brief' (and style, character, music) in storyboard.json before drafting")
     n, _ = check_draftable(sb)
-    provider = ctx.provider
+    provider, model = ctx.provider, text_model_id(ctx, sb)
     problem = None
     for _ in range(2):
-        result = call_model(ctx, stage="script", shot=None, provider="gemini", model=provider.TEXT_MODEL,
+        result = call_model(ctx, stage="script", shot=None, provider="gemini", model=model,
                             params={"retry_reason": problem} if problem else {}, seed=None,
-                            fn=lambda: provider.gemini_json(build_prompt(sb, n, problem), SHOTS_SCHEMA))
+                            fn=lambda: provider.gemini_json(build_prompt(sb, n, problem), SHOTS_SCHEMA, model))
         draft = copy.deepcopy(sb)
         draft["shots"] = result.get("shots") if isinstance(result, dict) else None
         try:

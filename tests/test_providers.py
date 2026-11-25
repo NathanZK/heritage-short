@@ -10,7 +10,7 @@ import pytest
 from jsonschema import Draft202012Validator
 
 from pipeline import mock, providers, smoke
-from pipeline.common import ProviderError, call_model, check_assessment, read_runs, validate
+from pipeline.common import Generated, ProviderError, call_model, check_assessment, read_runs, validate
 
 
 def schnell_schema():
@@ -42,9 +42,11 @@ def keys(monkeypatch):
 
 
 def test_model_ids_are_the_prescribed_constants():
-    assert providers.TEXT_MODEL == "gemini-3.8-flash"
+    assert providers.TEXT_MODEL == "gemini-3.5-flash-lite"           # default text model (EXPERIMENTS.md E2)
+    assert providers.TEXT_MODEL_FLASH == "gemini-3.8-flash"         # selectable with text_model
     assert providers.TTS_MODEL == "gemini-3.8-flash-tts"
     assert providers.IMAGE_MODEL == "@cf/black-forest-labs/flux-1-schnell"
+    assert providers.KLEIN_MODEL == "@cf/black-forest-labs/flux-2-klein-4b"
 
 
 def test_cloudflare_request_has_only_documented_fields(capture):
@@ -76,12 +78,15 @@ def test_gemini_text_request_and_strict_parse(capture):
     calls, install = capture
     schema = {"type": "object", "properties": {"a": {"type": "string"}}}
     install({"steps": [{"type": "model_output", "content": [{"type": "text", "text": '{"a": "b"}'}]}]})
-    assert providers.gemini_json("write", schema) == {"a": "b"}
+    assert providers.gemini_json("write", schema, "some-configured-model") == {"a": "b"}
     (url, headers, body), = calls
     assert url == "https://generativelanguage.googleapis.com/v1beta/interactions"
     assert headers["x-goog-api-key"] == "gem-key-1234" and headers["Api-Revision"] == "2026-05-20"
-    assert body == {"model": "gemini-3.8-flash", "input": "write",
+    assert body == {"model": "some-configured-model", "input": "write",
                     "response_format": {"type": "text", "mime_type": "application/json", "schema": schema}}
+    calls.clear()
+    providers.gemini_json("write", schema)
+    assert calls[0][2]["model"] == providers.TEXT_MODEL, "the default text model"
     install({"steps": []})
     with pytest.raises(ProviderError):
         providers.gemini_json("write", schema)
@@ -158,6 +163,55 @@ def test_smoke_makes_one_call_per_provider(ctx):
     runs = read_runs(ctx.runs_path)
     assert [(r["stage"], r["provider"]) for r in runs] == [("smoke", "gemini"), ("smoke", "gemini"),
                                                           ("smoke", "cloudflare")]
+    assert [r["model"] for r in runs] == ["mock-text", "mock-tts", "mock-klein"], "the default models"
+
+
+class Configured:
+    """Fake provider recording which model each call used."""
+    TEXT_MODEL, TEXT_MODEL_FLASH, TTS_MODEL = "lite-id", "flash-id", "tts-id"
+    KLEIN_MODEL, IMAGE_MODEL = "klein-id", "schnell-id"
+
+    def __init__(self):
+        self.calls = []
+
+    def gemini_json(self, prompt, schema, model="lite-id"):
+        self.calls.append(("text", model))
+        return {"ok": True}
+
+    def gemini_tts(self, text, voice):
+        self.calls.append(("tts", voice))
+        return mock.sine_wav(0.1)
+
+    def cloudflare_klein(self, prompt, width, height, seed, reference):
+        self.calls.append(("klein", width, height, reference))
+        return Generated(mock.cloudflare_klein(prompt, width, height, seed, reference).image, 26.05)
+
+    def cloudflare_image(self, prompt, steps=4):
+        self.calls.append(("schnell", steps))
+        return mock.cloudflare_image(prompt, steps)
+
+
+def test_smoke_follows_the_configured_models(ctx):
+    from pipeline.common import Ctx
+    fake = Configured()
+    ctx = Ctx(root=ctx.root, provider_override=fake, sleep=lambda s: None)
+    smoke.run(ctx, {"voice": "Kore", "text_model": "gemini-3.8-flash"}, None)
+    assert fake.calls[0] == ("text", "flash-id") and fake.calls[2] == ("klein", 256, 256, None)
+    runs = read_runs(ctx.runs_path)
+    assert [r["model"] for r in runs] == ["flash-id", "tts-id", "klein-id"]
+    assert runs[2]["neurons"] == 26.05 and runs[2]["list_price_usd"] == pytest.approx(26.05 * 0.011 / 1000)
+    fake.calls.clear()
+    smoke.run(ctx, {"voice": "Kore", "keyframe_model": "flux-1-schnell"}, None)
+    assert fake.calls[0] == ("text", "lite-id") and fake.calls[2] == ("schnell", 4)
+
+
+@pytest.mark.parametrize("neurons,price", [(107.8, 107.8 * 0.011 / 1000), (None, None)])
+def test_list_price_comes_from_reported_neurons_only(ctx, neurons, price):
+    call_model(ctx, stage="keyframes", shot="s01", provider="cloudflare", model="m", params={}, seed=1,
+               fn=lambda: Generated(b"img", neurons), usage=providers.cloudflare_usage)
+    (line,) = read_runs(ctx.runs_path)
+    assert line.get("neurons") == neurons
+    assert line["list_price_usd"] == (pytest.approx(price) if price is not None else None)
 
 
 @pytest.mark.parametrize("error", [
@@ -261,3 +315,121 @@ def test_malformed_gemini_audio_raises_a_provider_error(capture):
     install({"steps": [{"type": "model_output", "content": [{"type": "audio", "data": "***"}]}]})
     with pytest.raises(ProviderError):
         providers.gemini_tts("hi", "Kore")
+
+
+# ------------------------------------------------------------- FLUX.2 [klein] 4B (multipart)
+
+import email.parser
+
+
+class HeaderResponse(FakeResponse):
+    def __init__(self, body, headers):
+        super().__init__(body)
+        self.headers = headers
+
+
+def multipart_fields(req):
+    """Parse a multipart/form-data request body into {name: bytes}."""
+    raw = f"Content-Type: {req.headers['Content-type']}\r\n\r\n".encode() + req.data
+    msg = email.parser.BytesParser().parsebytes(raw)
+    assert msg.is_multipart()
+    return {part.get_param("name", header="content-disposition"): part.get_payload(decode=True)
+            for part in msg.get_payload()}
+
+
+@pytest.fixture
+def klein_http(monkeypatch):
+    seen = []
+
+    def install(body=None, headers=None):
+        body = body if body is not None else {"result": {"image": base64.b64encode(b"klein-jpeg").decode()},
+                                              "success": True, "errors": []}
+
+        def opener(req, timeout=None):
+            seen.append(req)
+            return HeaderResponse(json.dumps(body).encode(), headers if headers is not None
+                                  else {"cf-ai-neurons": "107.80"})
+        monkeypatch.setattr(providers.urllib.request, "urlopen", opener)
+    return seen, install
+
+
+def test_klein_sends_documented_multipart_fields_with_the_reference(klein_http):
+    seen, install = klein_http
+    install()
+    out = providers.cloudflare_klein("the woman from image 0 roasting coffee", 1280, 704, 42, b"\xff\xd8ref-bytes")
+    assert out.image == b"klein-jpeg" and out.neurons == pytest.approx(107.80)
+    (req,) = seen
+    assert req.full_url == ("https://api.cloudflare.com/client/v4/accounts/acct-1234/ai/run/"
+                            "@cf/black-forest-labs/flux-2-klein-4b")
+    assert req.get_method() == "POST" and req.headers["Authorization"] == "Bearer cf-token-1234"
+    assert req.headers["Content-type"].startswith("multipart/form-data; boundary=")
+    assert multipart_fields(req) == {"prompt": b"the woman from image 0 roasting coffee", "width": b"1280",
+                                     "height": b"704", "seed": b"42", "input_image_0": b"\xff\xd8ref-bytes"}
+
+
+def test_klein_without_a_reference_sends_no_image_field(klein_http):
+    seen, install = klein_http
+    install()
+    providers.cloudflare_klein("a sheet", 1280, 704, 7, None)
+    assert set(multipart_fields(seen[0])) == {"prompt", "width", "height", "seed"}
+
+
+@pytest.mark.parametrize("headers,neurons", [({"cf-ai-neurons": "12.5"}, 12.5), ({}, None),
+                                             ({"cf-ai-neurons": "n/a"}, None), ({"CF-AI-Neurons": "3"}, 3.0),
+                                             ({"cf-ai-neurons": "nan"}, None), ({"cf-ai-neurons": "-1"}, None),
+                                             ({"cf-ai-neurons": "inf"}, None)])
+def test_klein_neurons_come_from_the_response_header(klein_http, headers, neurons):
+    _, install = klein_http
+    install(headers=headers)
+    assert providers.cloudflare_klein("p", 1280, 704, 1, None).neurons == neurons
+
+
+@pytest.mark.parametrize("body", [{"result": {}, "success": True}, {"success": False, "errors": [{"code": 3030}]},
+                                  {"result": {"image": "***not base64***"}}, {"result": "text"}])
+def test_klein_rejects_bad_responses(klein_http, body):
+    _, install = klein_http
+    install(body=body)
+    with pytest.raises(ProviderError):
+        providers.cloudflare_klein("p", 1280, 704, 1, None)
+
+
+@pytest.mark.parametrize("status,body,retryable,quota", [
+    (429, b'{"errors":[{"code":3036}]}', False, True),
+    (503, b"x", True, False),
+    (400, b"x", False, False),
+])
+def test_klein_http_errors_are_classified_like_every_call(monkeypatch, status, body, retryable, quota):
+    fake_urlopen(monkeypatch, status, body)
+    with pytest.raises(ProviderError) as exc:
+        providers.cloudflare_klein("p", 1280, 704, 1, b"r")
+    assert (exc.value.retryable, exc.value.quota, exc.value.status) == (retryable, quota, status)
+
+
+def test_klein_network_failures_are_retried_and_logged(ctx, monkeypatch):
+    delays, attempts = [], []
+    ctx.sleep = delays.append
+
+    def opener(req, timeout=None):
+        attempts.append(1)
+        raise socket.timeout("timed out")
+
+    monkeypatch.setattr(providers.urllib.request, "urlopen", opener)
+    with pytest.raises(ProviderError):
+        call_model(ctx, stage="keyframes", shot="s01", provider="cloudflare", model="m", params={}, seed=1,
+                   fn=lambda: providers.cloudflare_klein("p", 1280, 704, 1, b"r"))
+    assert len(attempts) == 3 and delays == [2, 4]
+
+
+def test_klein_secrets_are_required(monkeypatch):
+    monkeypatch.delenv("CLOUDFLARE_API_TOKEN")
+    with pytest.raises(ProviderError) as exc:
+        providers.cloudflare_klein("p", 1280, 704, 1, None)
+    assert "CLOUDFLARE_API_TOKEN" in str(exc.value)
+
+
+def test_mock_klein_is_deterministic_and_sized():
+    from PIL import Image
+    a = mock.cloudflare_klein("p", 1280, 704, 1, b"r")
+    assert a == mock.cloudflare_klein("p", 1280, 704, 1, b"r")
+    assert a.image != mock.cloudflare_klein("p", 1280, 704, 1, b"other").image
+    assert Image.open(io.BytesIO(a.image)).size == (1280, 704)

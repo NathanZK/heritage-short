@@ -33,3 +33,6 @@ documentation before writing any integration (2026-11-25). Real run failures get
 12. **Network timeouts escaped the retry loop on Python 3.9 (found in review).** `socket.timeout` is not a
     `TimeoutError` there, so a slow response skipped the retry and left no log line. *Did:* any `OSError` or
     `http.client` error is now retried and logged.
+13. **`gemini-3.8-flash` over capacity (first real script run, 2026-11-25).** Three attempts: two 120 s timeouts and
+    one HTTP 503 "experiencing high demand"; the stage wrote nothing. *Did:* switched the default text model to
+    `gemini-3.5-flash-lite`, which drafted on the first attempt; Flash stays selectable (`EXPERIMENTS.md` E2, issue #6).

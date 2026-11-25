@@ -19,4 +19,5 @@ Documented free allowances (checked 2026-11-25, re-check before relying on them)
 - Gemini API: Flash and TTS models are free of charge on the free tier; the request-rate limits are shown only in AI Studio.
 - Kaggle GPU quota: the brief says about 30 GPU hours a week; the official Kaggle pages could not be read, so unverified.
 
-`list_price_usd` is `null` in `runs.jsonl` wherever no documented price can be applied. No GPU list price is assumed.
+`list_price_usd` is `null` in `runs.jsonl` wherever no documented price can be applied. It is set for FLUX.2 klein
+calls from the neurons Cloudflare reports ($0.011 per 1,000 neurons; free within 10,000 a day). No GPU list price is assumed.
