@@ -9,7 +9,7 @@ the code differs from it, the code and this document govern, and every differenc
 
 | Stage | Reads | Writes | Runs on |
 |---|---|---|---|
-| script | `brief`, style, character | `shots` in `storyboard.json` | Gemini `gemini-3.8-flash` |
+| script | `brief`, `target_seconds`, style, character | `shots` in `storyboard.json` | Gemini `gemini-3.8-flash` |
 | keyframes | style, character, shot prompts | `outputs/keyframes/{reference,<id>}.jpg` | Cloudflare `flux-1-schnell` |
 | narration | shot narration, voice | `outputs/narration/<id>.wav`, `subtitles.srt` | Gemini `gemini-3.8-flash-tts` |
 | shots | keyframes, motion prompts | `outputs/shots/<id>.mp4` + sidecar | Kaggle, Wan 2.2 TI2V-5B |
@@ -18,6 +18,24 @@ the code differs from it, the code and this document govern, and every differenc
 
 `storyboard.json` is validated against `schema/storyboard.schema.json` before every stage. Exit codes: 0 done,
 1 error, 2 incomplete but resumable, 3 awaiting the music choice.
+
+## Film length and assessment rules
+
+| Kind | What | Where |
+|---|---|---|
+| capability | a shot is at most 8 s; 3 s end card; composed keyframe prompt <= 2048; music caption <= 512 | schema, `validate()` |
+| project | `target_seconds`: film length including the end card; read only by the script stage | `storyboard.json` |
+| assessment | `assessment_rules: true`: 8-12 shots and 60-90 s, frame-accurate | `check_assessment()` |
+
+- The script stage plans `max(1, floor((target_seconds - 3) / 5 + 0.5))` shots (8-12 under the assessment rules)
+  and accepts a draft with exactly that many shots, each at least one frame, whose total is within max(1 s, 5 %) of
+  `target_seconds - 3`. After drafting the shots win: `run` only prints a note when they no longer fill the target.
+- Before any Gemini call it refuses: a target outside 60-90 s under the assessment rules; a plan needing shots over
+  8 s; and a plan leaving fewer than 8 characters per music cue. The cue allowance costs every cue-sheet entry with
+  the widest timestamps a draft within the tolerance can reach, so an accepted draft always fits the caption.
+- `check_assessment()` runs in the script output check, at the start of `run` and in `assemble`, whatever the
+  flags; `assemble --radio` (narration over black, never a film export) does not run it.
+- Neither `target_seconds` nor `assessment_rules` is in any fingerprint: changing them regenerates nothing.
 
 ## Caching and invalidation
 
@@ -86,6 +104,7 @@ Kaggle again unless you pass `--retry-fallbacks` (so an unchanged re-run costs n
 - Landscape clips are centre-cropped to 9:16: side content is lost.
 - Subtitles and end card are PNG overlays (the stock FFmpeg lacks `subtitles` and `drawtext`); Latin text only.
 - Cuts are not beat-snapped; the score's shape comes only from the cue sheet in the caption.
+- One score's caption bounds the film's length: about 135 s with a very short `music.prompt`, less as it grows.
 - The radio cut has no placeholder music: narration over black only.
 - `list_price_usd` is always `null`; list-price equivalents in `COSTS.md` are filled in by hand.
 - Keyframes are not conditioned on the reference sheet (the documented API has no reference-image input).
@@ -97,7 +116,7 @@ Kaggle again unless you pass `--retry-fallbacks` (so an unchanged re-run costs n
 | # | Spec section | The spec says | The code does |
 |---|---|---|---|
 | 1 | 2, 8 | shot `duration` <= 5 s | <= 8 s; a shot longer than Wan's ~5 s clip holds the clip's last frame |
-| 2 | 2, 3 | film-length rules (8-12 shots, 60-90 s) checked only by `assemble` and the script output check | also checked at the start of `run`; lengths are measured in whole 24 fps frames |
+| 2 | 2, 3 | film-length rules (8-12 shots, 60-90 s) checked only by `assemble` and the script output check, skipped by `--draft` | opt-in through `assessment_rules`; when on, checked by the script output check, at the start of `run` and by `assemble`, and `--draft` does not skip them; lengths are measured in whole 24 fps frames |
 | 3 | 3 | git-ignore `outputs/jobs/`, `_incoming/`, `mock/`, `.lock`; other outputs kept for inspection | all of `outputs/*` is git-ignored (except `.gitkeep`); `runs.jsonl` stays tracked |
 | 4 | 3, 6.4, 8 | a fallback clip is never fresh and is retried on every run | a fallback clip is usable and announced on every run; it is retried only with the new flag `--retry-fallbacks` |
 | 5 | 5.3 step 8 | delete `pending.json` once every item is ingested or rejected | `pending.json` is kept unless the run delivered results for its own `run_id` or Kaggle reports it failed; a resumed run is judged against the current fingerprints |
@@ -113,3 +132,4 @@ Kaggle again unless you pass `--retry-fallbacks` (so an unchanged re-run costs n
 | 15 | 2, 4, 5.5 | one `music.prompt` is the ACE-Step caption | every shot has a required `music_cue`; the caption is `music.prompt` plus a timed cue sheet, limited to 512 characters |
 | 16 | 5.5 | uv installed with the documented curl installer | uv is installed with `pip` and run as `python -m uv`; a failed setup step reports every item as an error and generates nothing |
 | 17 | 3.1 | `score.json` is `{candidates_fingerprint, candidate, candidate_sha256, reason, sha256}` | it also records `awaiting_choice` (the choice that was rejected as stale), so a choice made before listening stays stale on a plain re-run |
+| 18 | 2, 3, 5.1 | the script stage drafts 8-12 shots for 60-90 s | it drafts from the required `target_seconds` (shots of about 5 s) and refuses impossible targets before calling Gemini; the script stage has no `--draft` |

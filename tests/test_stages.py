@@ -35,9 +35,9 @@ def empty(ctx):
 
 def test_script_mock_writes_mock_copy_not_the_real_storyboard(ctx):
     sb = empty(ctx)
-    assert script.run(ctx, sb, NS(force=False, draft=False)) == 0
+    assert script.run(ctx, sb, NS(force=False)) == 0
     assert json.loads((ctx.root / "storyboard.json").read_text())["shots"] == []
-    assert len(load(ctx)["shots"]) == 12
+    assert len(load(ctx)["shots"]) == 3       # fixture target 16.5 s
     (line,) = lines(ctx)
     assert (line["stage"], line["provider"], line["shot"]) == ("script", "gemini", None)
 
@@ -45,25 +45,25 @@ def test_script_mock_writes_mock_copy_not_the_real_storyboard(ctx):
 def test_script_without_a_brief_is_a_clear_error_even_in_mock_mode(ctx):
     sb = edit(ctx, lambda sb: (sb.update(shots=[]), sb.pop("brief")))
     with pytest.raises(PipelineExit) as exc:
-        script.run(ctx, sb, NS(force=False, draft=False))
+        script.run(ctx, sb, NS(force=False))
     assert exc.value.code == 1 and "brief" in str(exc.value)
 
 
-def test_script_prompt_matches_the_length_rules(storyboard):
-    prompt = script.build_prompt(storyboard)
-    assert "8 to 12 shots" in prompt and "at most 8 seconds" in prompt and "57" in prompt and "87" in prompt
-    assert "holds its last frame" in prompt
+def test_script_prompt_follows_the_target(storyboard):
+    prompt = script.build_prompt(storyboard, 3)
+    assert "exactly 3 shots" in prompt and "at most 8 seconds" in prompt and "13.5 seconds" in prompt
+    assert "holds its last frame" in prompt and "8 to 12" not in prompt
 
 
 def test_script_does_nothing_when_shots_exist(ctx, storyboard):
-    assert script.run(ctx, storyboard, NS(force=False, draft=False)) == 0
+    assert script.run(ctx, storyboard, NS(force=False)) == 0
     assert not ctx.runs_path.exists()
 
 
 def test_script_force_backs_up_and_replaces(root):
     ctx = Ctx(root=root, provider_override=mock, sleep=lambda s: None)
-    sb = json.loads((root / "storyboard.json").read_text())
-    script.run(ctx, sb, NS(force=True, draft=False))
+    sb = dict(json.loads((root / "storyboard.json").read_text()), target_seconds=63)
+    script.run(ctx, sb, NS(force=True))
     assert len(json.loads((root / "storyboard.json").read_text())["shots"]) == 12
     (backup,) = root.glob("storyboard.json.bak-*")
     assert len(json.loads(backup.read_text())["shots"]) == 3
@@ -74,7 +74,7 @@ def test_script_refuses_placeholder_brief_in_real_mode(root):
     sb = json.loads((root / "storyboard.json").read_text())
     sb["shots"], sb["brief"]["premise"] = [], "TODO: the story"
     with pytest.raises(PipelineExit) as exc:
-        script.run(ctx, sb, NS(force=False, draft=False))
+        script.run(ctx, sb, NS(force=False))
     assert exc.value.code == 1 and "brief" in str(exc.value)
     assert not (root / "runs.jsonl").exists()
 
@@ -100,7 +100,7 @@ def test_script_retries_once_with_the_error_then_fails_without_writing(root):
     sb["shots"] = []
     before = (root / "storyboard.json").read_text()
     with pytest.raises(StoryboardError):
-        script.run(ctx, sb, NS(force=False, draft=False))
+        script.run(ctx, sb, NS(force=False))
     assert len(fake.prompts) == 2 and "duration" in fake.prompts[1]
     assert (root / "storyboard.json").read_text() == before
 
@@ -117,17 +117,14 @@ def test_script_survives_a_response_without_a_shot_list(root, answer):
     sb = json.loads((root / "storyboard.json").read_text())
     sb["shots"] = []
     with pytest.raises(StoryboardError):
-        script.run(ctx, sb, NS(force=False, draft=False))
+        script.run(ctx, sb, NS(force=False))
     assert len(read_runs(ctx.runs_path)) == 2
 
 
-def test_script_length_rule_is_skipped_by_draft(root):
-    three = mock.gemini_json("", {})["shots"][:3]
-    ctx = Ctx(root=root, provider_override=Scripted(three, three), sleep=lambda s: None)
-    sb = json.loads((root / "storyboard.json").read_text())
-    sb["shots"] = []
-    script.run(ctx, sb, NS(force=False, draft=True))
-    assert len(json.loads((root / "storyboard.json").read_text())["shots"]) == 3
+def test_the_script_stage_has_no_draft_flag(root):
+    with pytest.raises(SystemExit) as exc:
+        script.main(["--root", str(root), "--draft"])
+    assert exc.value.code == 2
 
 
 # ------------------------------------------------------------- keyframes

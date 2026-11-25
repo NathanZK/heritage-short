@@ -10,7 +10,7 @@ import pytest
 from jsonschema import Draft202012Validator
 
 from pipeline import mock, providers, smoke
-from pipeline.common import ProviderError, call_model, check_film, read_runs, validate
+from pipeline.common import ProviderError, call_model, check_assessment, read_runs, validate
 
 
 def schnell_schema():
@@ -150,7 +150,7 @@ def test_mock_media_is_deterministic_and_valid():
 def test_mock_script_is_a_valid_film(storyboard):
     sb = dict(storyboard, shots=mock.gemini_json("p", {})["shots"])
     validate(sb)
-    check_film(sb)
+    check_assessment(dict(sb, assessment_rules=True))
 
 
 def test_smoke_makes_one_call_per_provider(ctx):

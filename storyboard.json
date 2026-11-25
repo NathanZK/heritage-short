@@ -1,5 +1,6 @@
 {
   "title": "TODO: film title",
+  "target_seconds": 18,
   "brief": {
     "premise": "TODO: the person, place or story this film is about",
     "audience": "TODO: who will watch it, and where",

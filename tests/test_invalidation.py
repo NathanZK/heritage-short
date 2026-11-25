@@ -62,12 +62,15 @@ def test_one_narration_edit_means_one_tts_call_and_reassembly_costs_no_model_cal
     assert ctx.digest(*EXPORTS) == {k: second[k] for k in EXPORTS}, "bit-exact rebuild"
 
 
-def test_a_film_outside_the_length_rules_fails_before_any_model_call(root):
+@pytest.mark.parametrize("draft", [False, True])
+def test_a_film_outside_the_assessment_rules_fails_before_any_model_call(root, draft):
     from pipeline.common import StoryboardError
     ctx = Ctx(root=root, mock=True, sleep=lambda s: None)
+    sb = dict(load_storyboard(ctx), assessment_rules=True)
     with pytest.raises(StoryboardError):
-        pipeline_run.run_all(ctx, load_storyboard(ctx), NS(draft=False, fallback=False, resubmit=False, force=False,
-                                                           retry_fallbacks=False))
+        pipeline_run.run_all(ctx, sb, NS(draft=draft, fallback=False, resubmit=False, force=False,
+                                         retry_fallbacks=False))
+    assert not ctx.runs_path.exists()
     assert not ctx.runs_path.exists() and not (ctx.out / "keyframes").exists()
 
 
@@ -120,3 +123,15 @@ def test_a_duration_edit_costs_no_keyframe_or_voice_call(project):
     assert [r for r in ctx.lines()[n:] if r["stage"] in ("keyframes", "narration")] == []
     # the cue sheet's whole-second times moved (s03 ends at 13 s, not 14 s), so the score candidates are redone
     assert len([r for r in ctx.lines()[n:] if r["stage"] == "music"]) == 3
+
+
+def test_project_length_and_assessment_switch_are_in_no_fingerprint(project):
+    ctx = project
+    ctx.go()
+    n, before = len(ctx.lines()), ctx.digest("mix.wav", *EXPORTS)
+    ctx.edit(lambda sb: sb.update(target_seconds=120))
+    ctx.go()
+    ctx.edit(lambda sb: sb.update(assessment_rules=False))
+    ctx.go()
+    assert len(ctx.lines()) == n, "no model call"
+    assert ctx.digest("mix.wav", *EXPORTS) == before, "nothing rebuilt"

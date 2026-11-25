@@ -1,6 +1,6 @@
 # heritage-short
 
-A small studio in code that turns a written storyboard into a 60-90 second short film (9:16 and 16:9),
+A small studio in code that turns a written storyboard into a short film of the length you set (9:16 and 16:9),
 narrated, with an original score ducked under the voice, burned-in English subtitles and a visible
 "Made with AI" end card. Built for the 10 Academy AI-Content Generation challenge.
 
@@ -61,17 +61,25 @@ dataset; confirm that on kaggle.com and delete old dataset versions when you lik
 
 ## Running the real pipeline
 
-1. Fill in `storyboard.json`: `title`, `brief` (premise, audience, intent), `style`, `character`, `music.prompt`.
-   Leave `shots` empty to have the script stage draft 8-12 shots, or write them yourself (schema:
-   `schema/storyboard.schema.json`). Every shot needs a `reason` and a `music_cue`: what the score does under that
+1. Fill in `storyboard.json`: `title`, `target_seconds`, `brief` (premise, audience, intent), `style`, `character`,
+   `music.prompt`. `target_seconds` is the film's length *including* the 3 s end card (at least 4). Leave `shots`
+   empty to have the script stage draft them, or write them yourself (schema: `schema/storyboard.schema.json`).
+   The script stage plans shots of about 5 s (Wan makes clips of about 5 s; a shot is at most 8 s and a longer one
+   holds its last frame): `target_seconds: 18` gives 3 shots, 63 gives 12. It asks Gemini for exactly that many,
+   adding up to the target minus the end card, and accepts a draft within max(1 s, 5 %) of that total. Changing
+   `target_seconds` later does not redraft: `run` prints a note, and `python -m pipeline.script --force` redrafts. Every shot needs a `reason` and a `music_cue`: what the score does under that
    shot, in a few words (80 characters allowed). The music stage sends ACE-Step one caption, `music.prompt` followed
    by a cue sheet of every shot's cue with its start and end second, and that whole caption is limited to 512
-   characters (checked when the storyboard is validated). So the room per cue shrinks as `music.prompt` grows: with a
-   100-character prompt and 12 shots it is 24 characters. The script stage works the number out and tells the model;
-   if you write the shots yourself, keep the cues short, and shorten the prompt if validation says the caption is too
-   long.
-   A film has 8-12 shots that add up to 60-90 s *including* the 3 s end card. A shot is at most 8 s. Wan makes
-   clips of about 5 s, so a longer shot holds its last frame: prefer shots of about 5 s.
+   characters (checked when the storyboard is validated). So the room per cue shrinks as `music.prompt` and the
+   number of shots grow, and this bounds how long one score can be: about 135 s with a very short prompt, 110 s with
+   100 characters, 90 s with 200. The script stage works the room out, tells the model, and refuses a target with
+   fewer than 8 characters per cue before calling Gemini. If you write the shots yourself, keep the cues short, and
+   shorten the prompt if validation says the caption is too long.
+   **Assessment rules (10 Academy deliverable):** set `"assessment_rules": true` to require 8-12 shots and 60-90 s
+   including the end card. The script stage then refuses a `target_seconds` outside 60-90 before any call and drafts
+   8-12 shots; `run` and `assemble` refuse a storyboard that breaks the rules, and no flag skips them. Without it
+   (the default), any length and shot count the limits above allow is accepted; `run` and `assemble` print
+   `assessment rules: on` or `off` so an unchecked export is never silent.
 2. Check each provider once, cheaply (one call each, logged to `runs.jsonl` with latency): `make smoke`.
 3. One-time Kaggle setup: `make kaggle-setup` creates two private datasets for the job files. Kaggle may ask you
    to verify your phone before it allows GPU and internet in notebooks.
@@ -83,7 +91,8 @@ dataset; confirm that on kaggle.com and delete old dataset versions when you lik
    audience test) with `python -m pipeline.assemble --radio` after the narration stage.
 
 Run one stage with `python -m pipeline.<script|keyframes|narration|shots|music|assemble>`. Flags: `--mock`,
-`--only SHOT_ID...` (per-shot stages), `--draft` (skip the 8-12 shot and 60-90 s rules, allow no score),
+`--only SHOT_ID...` (per-shot stages), `--draft` (`run`, `music`, `assemble`: continue without a chosen score,
+and warn instead of failing when narration overruns its shot; it never skips the assessment rules),
 `--fallback` (shots only: FFmpeg pan-and-zoom for shots Wan could not make; announced on every run and in the
 assembly, and not submitted again unless you pass `--retry-fallbacks`),
 `--force` (script: redraft, backing up `storyboard.json`), `--resubmit` (discard a pending Kaggle run).

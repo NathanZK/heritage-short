@@ -127,10 +127,23 @@ def test_ffmpeg_version_survives_nightly_build_strings(monkeypatch):
     assert assemble.ffmpeg_version.__wrapped__().startswith("ffmpeg version N-118000")
 
 
-def test_film_length_rule_applies_without_draft(film):
+@pytest.mark.parametrize("draft", [False, True])
+def test_assessment_rules_apply_even_with_draft(film, draft):
     ctx, sb = film
-    with pytest.raises(StoryboardError):
-        assemble.run(ctx, sb, NS(draft=False, radio=False))
+    with pytest.raises(StoryboardError) as exc:
+        assemble.run(ctx, dict(sb, assessment_rules=True), NS(draft=draft, radio=False))
+    assert "assessment_rules" in str(exc.value)
+
+
+def test_without_assessment_rules_a_three_shot_film_exports_and_says_so(film, capsys):
+    ctx, sb = film
+    assemble.run(ctx, sb, NS(draft=True, radio=False))
+    assert "assessment rules: off" in capsys.readouterr().out
+
+
+def test_the_radio_cut_is_not_held_to_the_assessment_rules(film):
+    ctx, sb = film
+    assemble.run(ctx, dict(sb, assessment_rules=True), NS(draft=False, radio=True))
 
 
 def fresh_ctx(tmp_path, sb=None, with_music=True):

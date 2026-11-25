@@ -9,18 +9,20 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from pipeline import assemble, keyframes, music, narration, script, shots
-from pipeline.common import check_film, load_storyboard, stage_main, validate
+from pipeline.common import assessment_note, check_assessment, load_storyboard, stage_main, validate
 
 
 def run_all(ctx, sb, args) -> int:
+    print(assessment_note(sb))
     if args.force or not sb["shots"]:
         print("run: script")
-        if code := script.run(ctx, sb, SimpleNamespace(force=args.force, draft=args.draft)):
+        if code := script.run(ctx, sb, SimpleNamespace(force=args.force)):
             return code
         sb = load_storyboard(ctx)
     validate(sb)
-    if not args.draft:
-        check_film(sb)
+    check_assessment(sb)
+    if note := script.target_mismatch(sb):
+        print(note)
     stages = [
         ("keyframes", keyframes.run, SimpleNamespace()),
         ("narration", narration.run, SimpleNamespace()),
@@ -40,7 +42,8 @@ def run_all(ctx, sb, args) -> int:
 
 def main(argv=None) -> None:
     def extra(p):
-        p.add_argument("--draft", action="store_true", help="skip the 8-12 shot / 60-90 s rules; allow no score")
+        p.add_argument("--draft", action="store_true",
+                       help="continue without a chosen score (never skips the assessment rules)")
         p.add_argument("--fallback", action="store_true", help="pan-and-zoom clips for shots Wan could not make")
         p.add_argument("--retry-fallbacks", action="store_true", help="try Wan again for shots that have a fallback clip")
         p.add_argument("--force", action="store_true", help="redraft the shots with the script stage")
