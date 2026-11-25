@@ -136,7 +136,7 @@ is not part of this repository; where the code differs from it, the code and `AR
 | M2 | Cloudflare response envelope and image size; `flux-1-schnell` has **no seed and no reference-image input** (`flux-2-klein-4b` has both) | `make smoke`; see keyframes |
 | M3 | Wan on a Kaggle T4 (docs state 24 GB minimum): time, memory, bf16, flash_attn | `python -m pipeline.shots --only <id>`; use `--fallback` if it fails |
 | M4 | Kaggle: mount paths, `status` text, output of failed runs, quota, phone verification | the first real shots run |
-| M5 | ACE-Step on T4, candidate order; uv installed with pip and run as `python -m uv` in the kernel; how well the cue sheet in the caption is followed | the first real music run |
+| M5 | ACE-Step on T4 and the uv setup: **verified** by the first real run (`EXPERIMENTS.md` E4). Still open: candidate order versus seeds, how well the cue sheet is followed, and why the loaded language model went unused (`use_lm=False`) | listen to the candidates; check ACE-Step's logged `use_lm` decision |
 | M6 | character consistency across shots with a reference image (one image tested: `EXPERIMENTS.md` E1) | review the keyframes; log it in `EXPERIMENTS.md` |
 | M7 | privacy: Gemini free tier, Kaggle dataset visibility | decide before using real family details |
 

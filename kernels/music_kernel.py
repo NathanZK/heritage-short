@@ -3,7 +3,7 @@
 Pushed by pipeline/kaggle.py as a single generated file (RUN_ID and EXPECTED_IDS are filled in at push
 time). It only runs on Kaggle; the tests cover its pure functions. Works from the ACE-Step docs'
 Quick Start: uv, language-model handler, turbo DiT. uv is pip-installed and run as `python -m uv`, so PATH does not
-matter (unverified on Kaggle, README M5). Kaggle T4 behaviour is UNVERIFIED (spec A10)."""
+matter. Ran on a Kaggle T4 in the first real run (EXPERIMENTS.md E4)."""
 import hashlib
 import json
 import os
@@ -120,7 +120,10 @@ def main(root="/kaggle/input", work="/kaggle/working", scratch=None, run=subproc
     args = {**build_generation(job), "save_dir": str(generated), "paths_file": str(paths_file)}
     (project / "args.json").write_text(json.dumps(args))
     start = time.monotonic()
-    code = run([sys.executable, "-m", "uv", "run", "python", "runner.py", "args.json"], cwd=str(project)).returncode
+    # Kaggle sets MPLBACKEND to the Jupyter inline backend, which matplotlib (imported by ACE-Step) rejects.
+    env = {**os.environ, "MPLBACKEND": "Agg"}
+    code = run([sys.executable, "-m", "uv", "run", "python", "runner.py", "args.json"], cwd=str(project),
+               env=env).returncode
     seconds = round(time.monotonic() - start, 1)
     paths = json.loads(paths_file.read_text()) if code == 0 and paths_file.exists() else []
     for item, path in zip(job["items"], paths):

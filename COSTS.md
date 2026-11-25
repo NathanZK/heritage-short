@@ -1,7 +1,7 @@
 # Costs
 
-Measured values only. Nothing below has been measured yet: no real run has happened. Fill this in from
-`runs.jsonl` (latency, `gpu_seconds`) and `outputs/timings.jsonl` (local FFmpeg) after your first real runs.
+Measured values only. Rows are filled as stages are measured; fill the rest from `runs.jsonl` (latency,
+`gpu_seconds`, `neurons`) and `outputs/timings.jsonl` (local FFmpeg).
 
 | Stage | Calls | Latency (s) | GPU seconds | Free tier used | List-price equivalent |
 |---|---|---|---|---|---|
@@ -9,7 +9,7 @@ Measured values only. Nothing below has been measured yet: no real run has happe
 | keyframes | | | n/a | | |
 | narration | | | n/a | | |
 | shots (Wan 2.2) | | | | | |
-| music (ACE-Step) | | | | | |
+| music (ACE-Step) | 1 Kaggle run, 1 batch call (3 candidates) | 99.1 runner; about 215 end to end | 99.1 (runner time, recorded by the kernel; excludes pip, git clone and `uv sync`, and is repeated on each of the 3 candidate lines in `runs.jsonl`, so do not sum it) | Kaggle GPU quota 0.33 h → 0.38 h (`kaggle quota`; about 0.05 h) | n/a (no GPU list price assumed) |
 | assemble | n/a | | n/a | n/a | n/a |
 
 Documented free allowances (checked 2026-11-25, re-check before relying on them):
@@ -17,7 +17,8 @@ Documented free allowances (checked 2026-11-25, re-check before relying on them)
 - Cloudflare Workers AI: 10,000 neurons per day, reset 00:00 UTC. The docs give per-tile and per-step prices for
   `flux-1-schnell` but no per-image formula, so images per day is not stated here until measured.
 - Gemini API: Flash and TTS models are free of charge on the free tier; the request-rate limits are shown only in AI Studio.
-- Kaggle GPU quota: the brief says about 30 GPU hours a week; the official Kaggle pages could not be read, so unverified.
+- Kaggle GPU quota: `kaggle quota` (2026-11-26) shows 30.00 GPU hours a week, refreshing 2026-11-28 00:00 UTC; it
+  reports hours used, rounded to 0.01 h. Kaggle's own documentation pages could not be read.
 
 `list_price_usd` is `null` in `runs.jsonl` wherever no documented price can be applied. It is set for FLUX.2 klein
 calls from the neurons Cloudflare reports ($0.011 per 1,000 neurons; free within 10,000 a day). No GPU list price is assumed.

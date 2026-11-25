@@ -112,7 +112,8 @@ Kaggle again unless you pass `--retry-fallbacks` (so an unchanged re-run costs n
   and list-price equivalents in `COSTS.md` are filled in by hand. `cost_usd` stays the amount billed (0.0 on the free tier).
 - The generated reference sheet conditions nothing; only `character.reference_image` does (klein only).
 - The smoke test (`make smoke`) calls Gemini and Cloudflare only; it does not cover Kaggle.
-- The ACE-Step kernel installs uv with pip and runs it as `python -m uv`; unverified on Kaggle (README M5).
+- The ACE-Step kernel installs uv with pip and runs it as `python -m uv`; this worked on a Kaggle T4 in the first real run
+  (`EXPERIMENTS.md` E4).
 
 ## Differences from the approved spec
 

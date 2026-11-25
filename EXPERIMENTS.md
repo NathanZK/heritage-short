@@ -75,6 +75,28 @@ One entry per experiment: hypothesis, change, result. Aim for about ten. Back ev
   cultural shapes (jebena, handleless sini cups) and in-motion actions are not reliably followed from text.
 - **Decision:** keep klein with the reference for keyframes; the jebena and cup shapes remain open.
 
+### E4: ACE-Step 1.5 score on a Kaggle T4
+- **Hypothesis:** the music kernel generates three usable candidates on Kaggle's T4 in one short GPU session,
+  because ACE-Step's turbo model fits a 16 GB card (14.6 GB usable; its README recommends it for 8–16 GB GPUs).
+- **Change:** first real `python -m pipeline.music`, with `MPLBACKEND=Agg` for the runner (FAILURES 14) and
+  `HERITAGE_REMOTE_TIMEOUT_S=3600`. Caption: `music.prompt` plus the 3-cue sheet (263 characters); 20 s; seeds 42–44.
+- **Result (measured):** run `music-20261125T213435Z-e8eba3`, status COMPLETE, first attempt.
+  - Environment (kernel log): Tesla T4, 14.6 GB; ACE-Step ran in a uv-built Python 3.12 environment; float16 instead
+    of bfloat16 and eager attention (chosen by ACE-Step for pre-Ampere GPUs); models downloaded from Hugging Face in
+    41 s; the runner's language model initialised with the vllm backend.
+  - Generation: 3 audio tensors at batch 3; VRAM check 8.55 GB free against about 1.40 GB needed. ACE-Step reported
+    `llm_initialized=False, use_lm=False`, so the language model was not used, and our caption reached the DiT verbatim.
+  - Time: runner 99.1 s, covering model download, loading and generation but not pip, git clone or `uv sync`
+    (`runs.jsonl` repeats this batch total on each candidate line, seeds 42, 43, 44); about 215 s from submission to
+    ingest.
+  - Quota: 0.33 h → 0.38 h (`kaggle quota`).
+  - Files: three 20.000 s, 48 kHz stereo 16-bit WAVs, all different; peak -1.0 dB; mean -23.1, -18.8 and -19.6 dB.
+    Silence (below -50 dB for 2 s or more) starts at 11.7 s, 17.2 s and 15.7 s; the film is 18 s.
+- **Unverified:** how closely each candidate follows the cue sheet (not checked); that candidate order matches seed
+  order (assumed from the kernel's zip of results to items); why the language model the runner loads was not used.
+- **Decision:** the filmmaker listened and chose candidate 3 (seed 44); `score.wav` is a byte-identical copy. Its
+  silence from 15.7 s covers most of the 3 s end card.
+
 ## Ideas worth testing
 
 - Does repeating the character description in every keyframe prompt keep the character recognisable?
