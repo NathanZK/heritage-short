@@ -22,8 +22,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_PATH = ROOT / "schema" / "storyboard.schema.json"
 END_CARD_SECONDS = 3.0
-MIN_SECONDS, MAX_SECONDS = 60.0, 90.0
-MIN_SHOTS, MAX_SHOTS = 8, 12
+ASSESSMENT_SHOTS = (8, 12)          # 10 Academy rules, checked only when storyboard.json sets assessment_rules
+ASSESSMENT_SECONDS = (60.0, 90.0)   # film length including the end card
 MAX_MUSIC_CAPTION = 512  # ACE-Step's documented caption limit
 SECRET_ENV = ("GEMINI_API_KEY", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID", "KAGGLE_API_TOKEN", "KAGGLE_KEY")
 RETRY_DELAYS = (2, 4)
@@ -157,17 +157,30 @@ def validate(sb: dict, need_shots: bool = True, schema_path: Path = SCHEMA_PATH)
         raise StoryboardError("storyboard.json is invalid:\n  " + "\n  ".join(errors))
 
 
-def check_film(sb: dict) -> None:
-    """Brief rules: 8-12 shots, 60-90 s including the end card."""
+def assessment_on(sb: dict) -> bool:
+    return bool(sb.get("assessment_rules"))
+
+
+def check_assessment(sb: dict) -> None:
+    """The 10 Academy rules (8-12 shots, 60-90 s including the end card), only when the storyboard opts in.
+    No flag skips them; the shots are measured in whole frames, like the film itself."""
+    if not assessment_on(sb):
+        return
+    (lo_n, hi_n), (lo_s, hi_s) = ASSESSMENT_SHOTS, ASSESSMENT_SECONDS
     n, total = len(sb["shots"]), (sum(shot_frames(s) for s in sb["shots"]) + END_CARD_SECONDS * FPS) / FPS
     problems = []
-    if not MIN_SHOTS <= n <= MAX_SHOTS:
-        problems.append(f"{n} shots (the brief asks for {MIN_SHOTS}-{MAX_SHOTS})")
-    if not MIN_SECONDS <= total <= MAX_SECONDS:
+    if not lo_n <= n <= hi_n:
+        problems.append(f"{n} shots (the brief asks for {lo_n}-{hi_n})")
+    if not lo_s <= total <= hi_s:
         problems.append(f"length {total:.2f}s including the {END_CARD_SECONDS:.0f}s end card "
-                        f"(the brief asks for {MIN_SECONDS:.0f}-{MAX_SECONDS:.0f}s)")
+                        f"(the brief asks for {lo_s:.0f}-{hi_s:.0f}s)")
     if problems:
-        raise StoryboardError("shots: " + "; ".join(problems) + "; use --draft to skip this check")
+        raise StoryboardError("shots: " + "; ".join(problems)
+                              + "; set assessment_rules to false to experiment outside these rules")
+
+
+def assessment_note(sb: dict) -> str:
+    return "assessment rules: " + ("on" if assessment_on(sb) else "off (shot count and length not checked)")
 
 
 def seed_of(sb: dict) -> int:

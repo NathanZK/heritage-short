@@ -63,6 +63,8 @@ The pipeline calls these hosted APIs and notebooks directly. It does not introdu
 ## 4. Development approach
 
 Development begins with a three-shot test storyboard. This is a testing fixture, not a limit on the final film.
+Film length is set per storyboard (`target_seconds`); the assessment's 8-12 shots and 60-90 s are checked only
+when the storyboard sets `assessment_rules: true`.
 
 Each stage will be implemented and tested separately:
 

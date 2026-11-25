@@ -19,6 +19,7 @@ def runs(root):
 def test_run_mock_draft_end_to_end_and_second_run_is_free(root):
     first = cli("run", root, "--mock", "--draft")
     assert first.returncode == 0, first.stderr
+    assert "assessment rules: off" in first.stdout
     final = root / "outputs" / "mock" / "final"
     assert sorted(p.name for p in final.glob("film_*.mp4")) == ["film_16x9.mp4", "film_9x16.mp4"]
     n = runs(root)
@@ -57,9 +58,9 @@ def test_script_mock_does_not_overwrite_the_real_storyboard(root):
     sb = json.loads((root / "storyboard.json").read_text())
     sb["shots"] = []
     (root / "storyboard.json").write_text(json.dumps(sb))
-    assert cli("script", root, "--mock", "--draft").returncode == 0
+    assert cli("script", root, "--mock").returncode == 0
     assert json.loads((root / "storyboard.json").read_text())["shots"] == []
-    assert len(json.loads((root / "outputs" / "mock" / "storyboard.json").read_text())["shots"]) == 12
+    assert len(json.loads((root / "outputs" / "mock" / "storyboard.json").read_text())["shots"]) == 3
     assert cli("run", root, "--mock", "--draft").returncode == 0, "run continues from the mock storyboard"
 
 
@@ -72,3 +73,38 @@ def test_real_run_without_credentials_names_the_variable(root):
     result = cli("keyframes", root, env=env)
     assert result.returncode == 1 and "CLOUDFLARE_ACCOUNT_ID" in result.stderr and ".env.example" in result.stderr
     assert not (root / "outputs" / "keyframes").exists() or not list((root / "outputs" / "keyframes").glob("*.jpg"))
+
+
+def test_run_refuses_a_film_outside_the_assessment_rules_even_with_draft(root):
+    sb = json.loads((root / "storyboard.json").read_text())
+    (root / "storyboard.json").write_text(json.dumps(dict(sb, assessment_rules=True)))
+    result = cli("run", root, "--mock", "--draft")
+    assert result.returncode == 1 and "assessment_rules" in result.stderr and runs(root) == 0
+
+
+def test_script_rejects_the_removed_draft_flag(root):
+    result = cli("script", root, "--mock", "--draft")
+    assert result.returncode == 2 and "--draft" in result.stderr
+
+
+def test_run_says_when_the_shots_no_longer_match_the_target(root):
+    sb = json.loads((root / "storyboard.json").read_text())                # 13.5 s of shots
+    (root / "storyboard.json").write_text(json.dumps(dict(sb, target_seconds=63)))
+    result = cli("run", root, "--mock", "--draft", "--only", "s01")
+    assert result.returncode == 0, result.stderr
+    assert "target_seconds" in result.stdout and "--force" in result.stdout
+
+
+def test_run_is_quiet_about_the_target_when_the_shots_match(root):
+    result = cli("run", root, "--mock", "--draft", "--only", "s01")
+    assert result.returncode == 0 and "target_seconds" not in result.stdout
+
+
+def test_run_says_when_the_assessment_rules_are_on(root):
+    shots = [dict(json.loads((root / "storyboard.json").read_text())["shots"][0], id=f"s{i:02d}", duration=5.0)
+             for i in range(1, 13)]
+    sb = dict(json.loads((root / "storyboard.json").read_text()), assessment_rules=True, target_seconds=63, shots=shots)
+    (root / "storyboard.json").write_text(json.dumps(sb))
+    result = cli("run", root, "--mock", "--draft", "--only", "s01")
+    assert result.returncode == 0, result.stderr
+    assert "assessment rules: on" in result.stdout

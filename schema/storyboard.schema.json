@@ -3,9 +3,13 @@
   "title": "Storyboard",
   "type": "object",
   "additionalProperties": false,
-  "required": ["title", "language", "voice", "style", "character", "music", "shots"],
+  "required": ["title", "target_seconds", "language", "voice", "style", "character", "music", "shots"],
   "properties": {
     "title": {"type": "string", "minLength": 1, "maxLength": 120},
+    "target_seconds": {"type": "number", "minimum": 4,
+      "description": "intended film length in seconds, including the 3 s end card; the script stage drafts shots from it"},
+    "assessment_rules": {"type": "boolean",
+      "description": "true: enforce the 10 Academy rules (8-12 shots, 60-90 s including the end card)"},
     "brief": {
       "type": "object",
       "additionalProperties": false,

@@ -2,7 +2,7 @@ import copy
 
 import pytest
 
-from pipeline.common import StoryboardError, check_film, validate
+from pipeline.common import StoryboardError, check_assessment, validate
 
 
 def invalid(sb, **kw):
@@ -66,10 +66,12 @@ def test_all_errors_are_listed_together(storyboard):
 
 
 def test_length_is_measured_in_whole_frames_like_the_film_itself():
-    short = {"shots": [{"duration": 7.145417}] * 7 + [{"duration": 7.10375}]}   # 60.12 s of seconds, 59.958 s of frames
+    short = {"assessment_rules": True,
+             "shots": [{"duration": 7.145417}] * 7 + [{"duration": 7.10375}]}   # 60.12 s of seconds, 59.958 s of frames
     with pytest.raises(StoryboardError):
-        check_film(short)
-    check_film({"shots": [{"duration": 7.25}] * 11 + [{"duration": 7.27}]})      # 90.02 s of seconds, exactly 90.0 of frames
+        check_assessment(short)
+    check_assessment({"assessment_rules": True,
+                      "shots": [{"duration": 7.25}] * 11 + [{"duration": 7.27}]})  # 90.02 s of seconds, exactly 90.0 of frames
 
 
 def test_long_shots_up_to_eight_seconds_are_valid(storyboard):
@@ -83,8 +85,8 @@ def test_non_script_stages_need_a_shot(storyboard):
     assert "shot" in invalid(storyboard, need_shots=True)
 
 
-def make_film(n, each):
-    return {"shots": [{"duration": each} for _ in range(n)]}
+def make_film(n, each, rules=True):
+    return {"assessment_rules": rules, "shots": [{"duration": each} for _ in range(n)]}
 
 
 @pytest.mark.parametrize("n,each,ok", [
@@ -102,7 +104,50 @@ def make_film(n, each):
 ])
 def test_film_length_and_shot_count(n, each, ok):
     if ok:
-        check_film(make_film(n, each))
+        check_assessment(make_film(n, each))
     else:
         with pytest.raises(StoryboardError):
-            check_film(make_film(n, each))
+            check_assessment(make_film(n, each))
+
+
+@pytest.mark.parametrize("rules", [False, None])
+def test_without_assessment_rules_any_shot_count_and_length_is_accepted(rules):
+    film = make_film(3, 5.0, rules)
+    if rules is None:
+        film.pop("assessment_rules")
+    check_assessment(film)
+    check_assessment(make_film(40, 8.0, rules))
+
+
+def test_assessment_problems_are_listed_together_with_the_way_out():
+    with pytest.raises(StoryboardError) as exc:
+        check_assessment(make_film(3, 5.0))
+    message = str(exc.value)
+    assert "3 shots" in message and "length" in message
+    assert message.endswith("set assessment_rules to false to experiment outside these rules")
+
+
+# ------------------------------------------------------- project length and assessment rules
+
+def test_target_seconds_is_required(storyboard):
+    storyboard.pop("target_seconds", None)
+    assert "target_seconds" in invalid(storyboard)
+
+
+@pytest.mark.parametrize("value,ok", [(4, True), (16.5, True), (300, True), (3.9, False), (0, False), ("18", False)])
+def test_target_seconds_leaves_at_least_one_second_of_shots(storyboard, value, ok):
+    storyboard["target_seconds"] = value
+    if ok:
+        validate(storyboard)
+    else:
+        assert "target_seconds" in invalid(storyboard)
+
+
+@pytest.mark.parametrize("value,ok", [(True, True), (False, True), ("yes", False), (1, False)])
+def test_assessment_rules_is_an_optional_boolean(storyboard, value, ok):
+    validate(storyboard)                      # absent is valid
+    storyboard["assessment_rules"] = value
+    if ok:
+        validate(storyboard)
+    else:
+        assert "assessment_rules" in invalid(storyboard)

@@ -13,7 +13,7 @@ import re
 from pathlib import Path
 
 from pipeline import music, narration, shots
-from pipeline.common import (DEFAULT_END_CARD, END_CARD_SECONDS, FPS, Manifest, PipelineExit, check_film, commit_with, ffmpeg, fingerprint,
+from pipeline.common import (DEFAULT_END_CARD, END_CARD_SECONDS, FPS, Manifest, PipelineExit, assessment_note, check_assessment, commit_with, ffmpeg, fingerprint,
                              run_tool, sha256_file, shot_frames, shot_seconds, shot_starts, stage_main, timed)
 
 V = 1
@@ -237,8 +237,8 @@ def run(ctx, sb, args) -> int:
     manifest = Manifest(ctx)
     if args.radio:
         return run_radio(ctx, sb, manifest)
-    if not args.draft:
-        check_film(sb)
+    print(assessment_note(sb))
+    check_assessment(sb)
     score = check_inputs(ctx, sb, args.draft)
     check_narration_fits(ctx, sb, args.draft)
     total = sum(shot_seconds(s) for s in sb["shots"]) + END_CARD_SECONDS
@@ -271,7 +271,8 @@ def run(ctx, sb, args) -> int:
 
 def main(argv=None) -> None:
     def extra(p):
-        p.add_argument("--draft", action="store_true", help="skip the 8-12 shot / 60-90 s rules; allow no score")
+        p.add_argument("--draft", action="store_true",
+                       help="export without a chosen score; warn on narration overrun (never skips the assessment rules)")
         p.add_argument("--radio", action="store_true", help="radio cut: narration over a black picture")
     stage_main(run, __doc__, only_mode="error", extra_args=extra, argv=argv)
 

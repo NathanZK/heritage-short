@@ -1,5 +1,6 @@
 {
   "title": "Test film",
+  "target_seconds": 16.5,
   "brief": {"premise": "A grandmother walks to the market.", "audience": "Family abroad", "intent": "Feel close to home"},
   "language": "English",
   "voice": "Kore",

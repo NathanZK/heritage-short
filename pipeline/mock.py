@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import io
 import math
+import re
 import struct
 import wave
 
@@ -29,12 +30,19 @@ def sine_wav(seconds: float, freq: float = 220.0, rate: int = 24000, volume: flo
 
 
 def gemini_json(prompt: str, schema: dict) -> dict:
+    """Shots as the script prompt asks for them (count, total, cue length); 12 shots of 5 s otherwise."""
+    count = re.search(r"Write exactly (\d+) shots", prompt)
+    total = re.search(r"add up to ([\d.]+) seconds", prompt)
+    cue = re.search(r"at most (\d+) characters", prompt)
+    n = int(count.group(1)) if count else 12
+    each = round(float(total.group(1)) / n, 2) if count and total else 5.0
+    room = int(cue.group(1)) if cue else 80
     return {"shots": [{
-        "id": f"s{i:02d}", "duration": 5.0, "reason": f"Mock reason for shot {i}.",
+        "id": f"s{i:02d}", "duration": each, "reason": f"Mock reason for shot {i}.",
         "keyframe_prompt": f"Mock keyframe {i}.", "motion_prompt": "slow push in",
         "narration": f"Mock narration line number {i}.", "subtitle": f"Mock narration line number {i}.",
-        "music_cue": f"mock cue {i}",
-    } for i in range(1, 13)]}
+        "music_cue": f"cue {i}"[:room],
+    } for i in range(1, n + 1)]}
 
 
 def gemini_tts(text: str, voice: str) -> bytes:
