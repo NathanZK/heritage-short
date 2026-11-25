@@ -60,6 +60,8 @@ Each stage uses the interface and environment prescribed by the assessment:
 
 The pipeline calls these hosted APIs and notebooks directly. It does not introduce custom model-serving infrastructure or additional deployment layers.
 
+**Production decision for the assessment film:** moving shots use the assessment's FFmpeg pan-and-zoom fallback, and the music is the filmmaker's chosen ACE-Step candidate already generated on Kaggle. Real Wan 2.2 shots (through Diffusers, not the pipeline's Wan kernel, which cannot run on a T4) and ACE-Step music were both shown to be feasible on a Kaggle T4. But one short Wan clip took a 40-minute GPU session, and every regeneration of either needs a Kaggle account, CLI and quota, and new music needs a new listening choice (`EXPERIMENTS.md`, E4, E5 and "Production decision").
+
 ## 4. Development approach
 
 Development begins with a three-shot test storyboard. This is a testing fixture, not a limit on the final film.

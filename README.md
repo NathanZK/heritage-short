@@ -94,7 +94,9 @@ Run one stage with `python -m pipeline.<script|keyframes|narration|shots|music|a
 `--only SHOT_ID...` (per-shot stages), `--draft` (`run`, `music`, `assemble`: continue without a chosen score,
 and warn instead of failing when narration overruns its shot; it never skips the assessment rules),
 `--fallback` (shots only: FFmpeg pan-and-zoom for shots Wan could not make; announced on every run and in the
-assembly, and not submitted again unless you pass `--retry-fallbacks`),
+assembly, and not submitted again unless you pass `--retry-fallbacks`. It is applied after a Kaggle attempt; for the
+assessment film, which uses fallback clips for every shot, run `KAGGLE_USERNAME= python -m pipeline.shots --fallback`
+so no Kaggle job is submitted),
 `--force` (script: redraft, backing up `storyboard.json`), `--resubmit` (discard a pending Kaggle run).
 
 The score follows the storyboard's timeline through the cue sheet, but cuts are **not** snapped to beats: the cuts
@@ -134,7 +136,7 @@ is not part of this repository; where the code differs from it, the code and `AR
 |---|---|---|
 | M1 | raw Gemini text-response shape, 429 body, Amharic/English narration quality | `make smoke`, then listen |
 | M2 | Cloudflare response envelope and image size; `flux-1-schnell` has **no seed and no reference-image input** (`flux-2-klein-4b` has both) | `make smoke`; see keyframes |
-| M3 | Wan on a Kaggle T4 (docs state 24 GB minimum): time, memory, bf16, flash_attn | `python -m pipeline.shots --only <id>`; use `--fallback` if it fails |
+| M3 | Wan on a Kaggle T4: **answered.** The pipeline's kernel cannot run there (FAILURES 15); Diffusers can: one 3.4 s, 480p clip took about 40 GPU-session minutes, about 32 of them generating (`EXPERIMENTS.md` E5). The film uses the fallback | `KAGGLE_USERNAME= python -m pipeline.shots --fallback` |
 | M4 | Kaggle: mount paths, `status` text, output of failed runs, quota, phone verification | the first real shots run |
 | M5 | ACE-Step on T4 and the uv setup: **verified** by the first real run (`EXPERIMENTS.md` E4). Still open: candidate order versus seeds, how well the cue sheet is followed, and why the loaded language model went unused (`use_lm=False`) | listen to the candidates; check ACE-Step's logged `use_lm` decision |
 | M6 | character consistency across shots with a reference image (one image tested: `EXPERIMENTS.md` E1) | review the keyframes; log it in `EXPERIMENTS.md` |

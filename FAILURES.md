@@ -43,3 +43,10 @@ documentation before writing any integration (2026-11-25). Real run failures get
     `MPLBACKEND=Agg` (regression test in `tests/test_kernels.py`). The first pipeline music job (2026-11-25) then ran
     without the error; whether Kaggle sets the same variable for batch script kernels was not checked, since the fix
     makes it irrelevant.
+15. **The pipeline's Wan kernel cannot run on a Kaggle T4 (found by reading Wan 2.2's source, 2026-11-25; not run).**
+    Wan's video model calls `flash_attention` directly and asserts FlashAttention 2 is installed (`model.py`,
+    `attention.py`); FlashAttention 2 needs Ampere or newer, and a T4 is Turing. bfloat16 is hard-coded, and Wan's
+    README gives a 22.8 GB peak for our flags against the T4's 16 GB. This resolves entry 5. Entry 6 is also out of
+    date: Diffusers' `WanImageToVideoPipeline` does image-to-video with TI2V-5B. *Did:* did not submit the kernel,
+    to save quota; tested the Diffusers route instead, which worked but slowly (`EXPERIMENTS.md` E5); the film uses
+    the FFmpeg fallback (`EXPERIMENTS.md`, "Production decision").
