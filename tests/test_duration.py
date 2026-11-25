@@ -37,7 +37,7 @@ class Recorder:
     def __init__(self, *answers):
         self.answers, self.prompts = list(answers), []
 
-    def gemini_json(self, prompt, schema):
+    def gemini_json(self, prompt, schema, model=None):
         self.prompts.append(prompt)
         return {"shots": self.answers.pop(0)}
 

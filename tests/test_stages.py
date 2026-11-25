@@ -6,7 +6,7 @@ import pytest
 from PIL import Image
 
 from pipeline import keyframes, mock, narration, script
-from pipeline.common import Ctx, Manifest, PipelineExit, ProviderError, StoryboardError, read_runs
+from pipeline.common import Ctx, Generated, Manifest, PipelineExit, ProviderError, StoryboardError, read_runs
 
 NS = SimpleNamespace
 
@@ -86,7 +86,7 @@ class Scripted:
     def __init__(self, *answers):
         self.answers, self.prompts = list(answers), []
 
-    def gemini_json(self, prompt, schema):
+    def gemini_json(self, prompt, schema, model=None):
         self.prompts.append(prompt)
         return {"shots": self.answers.pop(0)}
 
@@ -110,7 +110,7 @@ def test_script_survives_a_response_without_a_shot_list(root, answer):
     class Odd:
         TEXT_MODEL = "fake"
 
-        def gemini_json(self, prompt, schema):
+        def gemini_json(self, prompt, schema, model=None):
             return answer
 
     ctx = Ctx(root=root, provider_override=Odd(), sleep=lambda s: None)
@@ -139,8 +139,8 @@ def test_keyframes_generate_reference_then_every_shot(ctx):
     assert sorted(p.name for p in out.glob("*.jpg")) == ["reference.jpg", "s01.jpg", "s02.jpg", "s03.jpg"]
     runs = lines(ctx, "keyframes")
     assert [r["shot"] for r in runs] == ["reference", "s01", "s02", "s03"]
-    assert all(r["seed"] is None and r["params"]["steps"] == 4 and set(r["params"]) == {"prompt", "steps"}
-               for r in runs)
+    assert all(r["seed"] is not None and set(r["params"]) == {"prompt", "width", "height", "reference_sha256"}
+               and (r["params"]["width"], r["params"]["height"]) == (1280, 704) for r in runs)   # klein, no reference
     assert Manifest(ctx).fresh("keyframe:s01", keyframes.keyframe_fp(ctx, load(ctx), load(ctx)["shots"][0]),
                                out / "s01.jpg")
 
@@ -168,12 +168,12 @@ def test_only_limits_shots_but_still_ensures_the_reference(ctx):
 
 def test_non_jpeg_provider_output_is_stored_as_jpeg(root):
     class Png:
-        IMAGE_MODEL = "fake"
+        KLEIN_MODEL = "fake"
 
-        def cloudflare_image(self, prompt, steps=4):
+        def cloudflare_klein(self, prompt, width, height, seed, reference):
             buf = io.BytesIO()
-            Image.new("RGB", (512, 512), "red").save(buf, "PNG")
-            return buf.getvalue()
+            Image.new("RGB", (width, height), "red").save(buf, "PNG")
+            return Generated(buf.getvalue(), None)
 
     ctx = Ctx(root=root, provider_override=Png(), sleep=lambda s: None)
     keyframes.run(ctx, load(ctx), NS())
@@ -185,9 +185,9 @@ def test_failed_generation_keeps_the_previous_keyframe(ctx):
     old = (ctx.out / "keyframes" / "s02.jpg").read_bytes()
 
     class Failing:
-        IMAGE_MODEL = "mock-image"
+        KLEIN_MODEL = "mock-klein"
 
-        def cloudflare_image(self, prompt, steps=4):
+        def cloudflare_klein(self, prompt, width, height, seed, reference):
             raise ProviderError("HTTP 400", status=400)
 
     edit(ctx, lambda sb: sb["shots"][1].update(keyframe_prompt="changed"))
@@ -257,3 +257,42 @@ def test_partial_run_does_not_write_subtitles(ctx):
     ctx.only = {"s01"}
     run_narration(ctx)
     assert not (ctx.out / "subtitles.srt").exists()
+
+
+# ------------------------------------------------------------- text model selection
+
+class TextModels:
+    TEXT_MODEL, TEXT_MODEL_FLASH = "lite-id", "flash-id"
+
+    def __init__(self):
+        self.models = []
+
+    def gemini_json(self, prompt, schema, model="lite-id"):
+        self.models.append(model)
+        return mock.gemini_json(prompt, schema)
+
+
+@pytest.mark.parametrize("setting,expected", [(None, "lite-id"), ("gemini-3.5-flash-lite", "lite-id"),
+                                              ("gemini-3.8-flash", "flash-id")])
+def test_the_script_stage_uses_the_configured_text_model(root, setting, expected):
+    fake = TextModels()
+    ctx = Ctx(root=root, provider_override=fake, sleep=lambda s: None)
+    sb = json.loads((root / "storyboard.json").read_text())
+    sb["shots"] = []
+    if setting:
+        sb["text_model"] = setting
+    script.run(ctx, sb, NS(force=False))
+    assert fake.models == [expected]
+    assert [r["model"] for r in read_runs(ctx.runs_path)] == [expected]
+
+
+@pytest.mark.parametrize("value,ok", [("gemini-3.5-flash-lite", True), ("gemini-3.8-flash", True),
+                                      ("gemini-1.0-pro", False)])
+def test_text_model_is_one_of_the_supported_ids(storyboard, value, ok):
+    from pipeline.common import validate
+    storyboard["text_model"] = value
+    if ok:
+        validate(storyboard)
+    else:
+        with pytest.raises(StoryboardError):
+            validate(storyboard)

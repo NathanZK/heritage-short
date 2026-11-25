@@ -1,20 +1,56 @@
 {
-  "title": "TODO: film title",
+  "title": "Morning Coffee",
   "target_seconds": 18,
+  "assessment_rules": false,
+  "keyframe_model": "flux-2-klein-4b",
   "brief": {
-    "premise": "TODO: the person, place or story this film is about",
-    "audience": "TODO: who will watch it, and where",
-    "intent": "TODO: what they should feel or understand at the end"
+    "premise": "A fictional grandmother in an Ethiopian highland village performs the traditional coffee ceremony at dawn: roasting, grinding and pouring for her neighbours.",
+    "audience": "Ethiopian diaspora families, watching on their phones",
+    "intent": "Feel the warmth and patience of a daily ritual that ties a community together."
   },
   "language": "English",
   "voice": "Kore",
   "seed": 42,
-  "style": "TODO: a fixed style block added to every image prompt, e.g. warm, grainy, hand-painted",
+  "style": "warm golden morning light, soft film grain, painterly realism, shallow depth of field",
   "character": {
-    "name": "TODO",
-    "description": "TODO: a fixed description of the main character, added to every image prompt"
+    "name": "Almaz",
+    "description": "a fictional elderly Ethiopian woman in a white netela shawl, with a kind lined face and silver earrings",
+    "reference_image": "assets/character_reference.jpg"
   },
-  "music": {"prompt": "TODO: describe the instrumental score"},
+  "music": {
+    "prompt": "gentle solo krar and soft hand percussion, slow, warm and hopeful"
+  },
   "end_card": "Made with AI",
-  "shots": []
+  "shots": [
+    {
+      "id": "s01",
+      "duration": 5.0,
+      "reason": "Establish the quiet dawn and the beginning of the roasting ritual.",
+      "keyframe_prompt": "Almaz kneels beside a small clay charcoal brazier at dawn, holding a flat long-handled metal pan over the glowing coals and stirring pale green raw coffee beans in it with a short metal stirrer; thin smoke rises from the beans",
+      "motion_prompt": "Subtle slow push-in on the roasting pan, rising smoke drifting gently across the frame.",
+      "narration": "Before the sun fully wakes the hills, the roasting begins.",
+      "subtitle": "Before the sun fully wakes the hills, the roasting begins.",
+      "music_cue": "Soft traditional wash of krar strings and distant morning birds."
+    },
+    {
+      "id": "s02",
+      "duration": 5.0,
+      "reason": "Show the sensory detail of grinding and preparing the jebena.",
+      "keyframe_prompt": "Almaz kneels on the earth floor pounding dark roasted coffee beans: both hands grip a long wooden pestle raised mid-strike above a tall, deep, narrow traditional wooden mortar (mukecha) standing upright on the ground in front of her, with roasted beans and coarse coffee grounds visible at its rim",
+      "motion_prompt": "Gentle hand-held camera movement following the rising and falling rhythm of the pestle.",
+      "narration": "Every tap of the mortar calls the neighborhood close.",
+      "subtitle": "Every tap of the mortar calls the neighborhood close.",
+      "music_cue": "Rhythm picks up slightly with a warm ambient pulse."
+    },
+    {
+      "id": "s03",
+      "duration": 5.0,
+      "reason": "Conclude with the community gathering for the final pour.",
+      "keyframe_prompt": "Almaz pours coffee in a thin stream from a traditional black clay jebena, a coffee pot with a round spherical base, a long narrow upright neck, a straight spout and a curved side handle, into small white handleless cups (sini) on a low wooden tray; smiling Ethiopian neighbours from the same highland village, men and women in white netela shawls and traditional dress, sit around her, softly blurred",
+      "motion_prompt": "Smooth pan from the pouring spout to the joyful faces of the gathered friends.",
+      "narration": "A shared cup of patience, binding us together.",
+      "subtitle": "A shared cup of patience, binding us together.",
+      "music_cue": "Harmonious choral hum fading gently into silence."
+    }
+  ]
 }

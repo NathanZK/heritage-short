@@ -9,9 +9,13 @@ import re
 import struct
 import wave
 
+from pipeline.common import Generated
+
 TEXT_MODEL = "mock-text"
+TEXT_MODEL_FLASH = "mock-text"
 TTS_MODEL = "mock-tts"
 IMAGE_MODEL = "mock-image"
+KLEIN_MODEL = "mock-klein"
 
 
 def _digest(*parts) -> bytes:
@@ -29,7 +33,7 @@ def sine_wav(seconds: float, freq: float = 220.0, rate: int = 24000, volume: flo
     return buf.getvalue()
 
 
-def gemini_json(prompt: str, schema: dict) -> dict:
+def gemini_json(prompt: str, schema: dict, model: str = TEXT_MODEL) -> dict:
     """Shots as the script prompt asks for them (count, total, cue length); 12 shots of 5 s otherwise."""
     count = re.search(r"Write exactly (\d+) shots", prompt)
     total = re.search(r"add up to ([\d.]+) seconds", prompt)
@@ -60,3 +64,15 @@ def cloudflare_image(prompt: str, steps: int = 4) -> bytes:
     buf = io.BytesIO()
     img.save(buf, "JPEG")
     return buf.getvalue()
+
+
+def cloudflare_klein(prompt: str, width: int, height: int, seed: int, reference) -> Generated:
+    """Same interface as providers.cloudflare_klein: a plain colour frame of the asked size; no neurons."""
+    from PIL import Image, ImageDraw
+
+    digest = _digest(prompt, width, height, seed, hashlib.sha256(reference or b"").hexdigest())
+    img = Image.new("RGB", (width, height), tuple(60 + b % 120 for b in digest[:3]))
+    ImageDraw.Draw(img).text((40, 40), f"MOCK KLEIN {digest.hex()[:8]}", fill=(255, 255, 255))
+    buf = io.BytesIO()
+    img.save(buf, "JPEG")
+    return Generated(buf.getvalue(), None)

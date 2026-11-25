@@ -21,6 +21,7 @@ You fill in the consent record, labelling plan and licence check; the pipeline c
 | Wan 2.2 TI2V-5B | Apache 2.0 | model card, verified |
 | ACE-Step 1.5 | MIT (code and weights) | the model card states generated music may be used commercially; verified |
 | FLUX.1 schnell (via Cloudflare) | **to verify** | not checked |
+| FLUX.2 [klein] 4B (via Cloudflare) | Apache 2.0 (open weights) | Hugging Face model card and BFL's klein page, checked 2026-11-25. Cloudflare links BFL's Terms of Service, not a licence, and does not say which weights it serves. Those terms (rev. 2026-08-01): BFL claims no ownership of outputs but takes a licence to use inputs and outputs to improve its models (opt-out: legal@blackforestlabs.ai); outputs must not be presented as human-made or as photographs of real events, and AI labels or metadata must not be removed; consent is required for real, identifiable people. BFL's Usage Policy not read |
 | Gemini API and TTS | **to verify** | Google's terms; free-tier data use below |
 
 ## Data

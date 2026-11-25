@@ -9,8 +9,8 @@ the code differs from it, the code and this document govern, and every differenc
 
 | Stage | Reads | Writes | Runs on |
 |---|---|---|---|
-| script | `brief`, `target_seconds`, style, character | `shots` in `storyboard.json` | Gemini `gemini-3.8-flash` |
-| keyframes | style, character, shot prompts | `outputs/keyframes/{reference,<id>}.jpg` | Cloudflare `flux-1-schnell` |
+| script | `brief`, `target_seconds`, style, character | `shots` in `storyboard.json` | Gemini `gemini-3.5-flash-lite` (default) or `gemini-3.8-flash` (`text_model`) |
+| keyframes | style, character (and `reference_image`), shot prompts | `outputs/keyframes/<id>.jpg` (and `reference.jpg` without a reference image) | Cloudflare `flux-2-klein-4b` (default) or `flux-1-schnell` |
 | narration | shot narration, voice | `outputs/narration/<id>.wav`, `subtitles.srt` | Gemini `gemini-3.8-flash-tts` |
 | shots | keyframes, motion prompts | `outputs/shots/<id>.mp4` + sidecar | Kaggle, Wan 2.2 TI2V-5B |
 | music | music prompt, per-shot `music_cue`s and their times, film length | three candidates, then `score.wav` | Kaggle, ACE-Step 1.5 |
@@ -50,6 +50,8 @@ still invalidate what depends on it.
 - Exports hash their clips, mix, subtitles and end card. Changing one narration line makes one TTS call, then
   rebuilds the mix and both exports locally with no further model call (tested in `tests/test_invalidation.py`).
 - Changing `style` or `character.description` regenerates every keyframe and clip, on purpose.
+- A klein keyframe's fingerprint holds the model, size (1280x704), seed, composed prompt and the reference
+  image's sha256, so a new reference image regenerates every keyframe and clip.
 - The music candidates' fingerprint holds the caption: `music.prompt` plus a cue sheet of every shot's `music_cue`
   with its whole-second start and end. Editing a cue (or a duration that moves those whole seconds) regenerates the
   three candidates and makes the music choice stale (exit 3 until you choose again). Narration edits do not touch it.
@@ -98,16 +100,17 @@ Kaggle again unless you pass `--retry-fallbacks` (so an unchanged re-run costs n
 
 ## Known limits
 
-- The keyframe API has no seed and no reference image: no consistency guarantee, and keyframes are not reproducible
-  by re-generation (reproducibility comes from cached outputs).
+- `flux-1-schnell` has no seed and no reference image. `flux-2-klein-4b` takes both, but consistency is still not
+  guaranteed, and keyframes are not reproducible by re-generation (reproducibility comes from cached outputs).
 - Wan on a Kaggle T4 is unverified; `--fallback` makes pan-and-zoom clips instead, clearly marked and retried later.
 - Landscape clips are centre-cropped to 9:16: side content is lost.
 - Subtitles and end card are PNG overlays (the stock FFmpeg lacks `subtitles` and `drawtext`); Latin text only.
 - Cuts are not beat-snapped; the score's shape comes only from the cue sheet in the caption.
 - One score's caption bounds the film's length: about 135 s with a very short `music.prompt`, less as it grows.
 - The radio cut has no placeholder music: narration over black only.
-- `list_price_usd` is always `null`; list-price equivalents in `COSTS.md` are filled in by hand.
-- Keyframes are not conditioned on the reference sheet (the documented API has no reference-image input).
+- `list_price_usd` is set only for klein calls (neurons from `cf-ai-neurons` × $0.011/1,000); elsewhere it is `null`
+  and list-price equivalents in `COSTS.md` are filled in by hand. `cost_usd` stays the amount billed (0.0 on the free tier).
+- The generated reference sheet conditions nothing; only `character.reference_image` does (klein only).
 - The smoke test (`make smoke`) calls Gemini and Cloudflare only; it does not cover Kaggle.
 - The ACE-Step kernel installs uv with pip and runs it as `python -m uv`; unverified on Kaggle (README M5).
 
@@ -133,3 +136,5 @@ Kaggle again unless you pass `--retry-fallbacks` (so an unchanged re-run costs n
 | 16 | 5.5 | uv installed with the documented curl installer | uv is installed with `pip` and run as `python -m uv`; a failed setup step reports every item as an error and generates nothing |
 | 17 | 3.1 | `score.json` is `{candidates_fingerprint, candidate, candidate_sha256, reason, sha256}` | it also records `awaiting_choice` (the choice that was rejected as stale), so a choice made before listening stays stale on a plain re-run |
 | 18 | 2, 3, 5.1 | the script stage drafts 8-12 shots for 60-90 s | it drafts from the required `target_seconds` (shots of about 5 s) and refuses impossible targets before calling Gemini; the script stage has no `--draft` |
+| 19 | 5.2 | keyframes use `flux-1-schnell`, `{prompt, steps}` only; no seed, no reference image | default `flux-2-klein-4b` (multipart; 1280x704; per-shot seed; optional `character.reference_image` as `input_image_0`); schnell stays selectable with `keyframe_model`; no sheet when a reference image is set; `neurons` logged |
+| 20 | 5.1 | text model `gemini-3.8-flash`, a code constant | default `gemini-3.5-flash-lite`; `gemini-3.8-flash` selectable with the storyboard's `text_model` (still code constants, no environment override) |

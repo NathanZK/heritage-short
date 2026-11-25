@@ -10,7 +10,7 @@ so changing one shot regenerates only that shot.
 ```
 storyboard.json -> script -> keyframes -> narration -> shots -> music -> assemble -> 9:16 and 16:9 films
                    Gemini    Cloudflare    Gemini      Kaggle    Kaggle    FFmpeg
-                             FLUX schnell  TTS         Wan 2.2   ACE-Step
+                             FLUX.2 klein  TTS         Wan 2.2   ACE-Step
 ```
 
 ## Try it now, no credentials
@@ -120,9 +120,10 @@ No test calls a provider, Kaggle, Wan or ACE-Step. Generation quality, GPU behav
 
 ## What is verified and what is not
 
-Verified against official documentation on 2026-11-25: Gemini Interactions API endpoint, `gemini-3.8-flash` and
-`gemini-3.8-flash-tts` ids, TTS request and audio location (24 kHz WAV); Cloudflare `flux-1-schnell` request
-fields (`prompt`, `steps` only) and daily limit error; Wan `generate.py` flags; ACE-Step Python API fields; Kaggle CLI
+Verified against official documentation on 2026-11-25: Gemini Interactions API endpoint, `gemini-3.5-flash-lite`
+(default text model), `gemini-3.8-flash` and `gemini-3.8-flash-tts` ids, TTS request and audio location (24 kHz WAV); Cloudflare `flux-1-schnell` request
+fields (`prompt`, `steps` only) and daily limit error; Cloudflare `flux-2-klein-4b` multipart fields (`prompt`,
+`width`, `height`, `seed`, `input_image_0`; input images under 512x512) from Cloudflare's klein-4b changelog entry; Wan `generate.py` flags; ACE-Step Python API fields; Kaggle CLI
 commands and metadata fields.
 
 **Assumptions and manual checks** (also see `FAILURES.md`). The implementation was built from an approved spec that
@@ -132,23 +133,36 @@ is not part of this repository; where the code differs from it, the code and `AR
 | # | Unverified | Your check |
 |---|---|---|
 | M1 | raw Gemini text-response shape, 429 body, Amharic/English narration quality | `make smoke`, then listen |
-| M2 | Cloudflare response envelope and image size; the API has **no seed and no reference-image input** | `make smoke`; see keyframes |
+| M2 | Cloudflare response envelope and image size; `flux-1-schnell` has **no seed and no reference-image input** (`flux-2-klein-4b` has both) | `make smoke`; see keyframes |
 | M3 | Wan on a Kaggle T4 (docs state 24 GB minimum): time, memory, bf16, flash_attn | `python -m pipeline.shots --only <id>`; use `--fallback` if it fails |
 | M4 | Kaggle: mount paths, `status` text, output of failed runs, quota, phone verification | the first real shots run |
 | M5 | ACE-Step on T4, candidate order; uv installed with pip and run as `python -m uv` in the kernel; how well the cue sheet in the caption is followed | the first real music run |
-| M6 | character consistency with text-only conditioning | review the keyframes; log it in `EXPERIMENTS.md` |
+| M6 | character consistency across shots with a reference image (one image tested: `EXPERIMENTS.md` E1) | review the keyframes; log it in `EXPERIMENTS.md` |
 | M7 | privacy: Gemini free tier, Kaggle dataset visibility | decide before using real family details |
 
 ## Known limitations
 
 - The radio cut is narration over black only; it has no placeholder music.
-- `list_price_usd` is always `null` in `runs.jsonl`, so list-price equivalents in `COSTS.md` must be filled in by hand.
-- Keyframes are not conditioned on the reference sheet (the documented keyframe API takes no reference image).
+- `list_price_usd` in `runs.jsonl` is filled only for FLUX.2 klein calls (Cloudflare reports their neurons; $0.011 per
+  1,000). Gemini and Kaggle lines keep `null`, so their list-price equivalents in `COSTS.md` are filled in by hand.
+- With `flux-1-schnell`, keyframes are conditioned on text only (no seed, no reference image).
 - `make smoke` checks Gemini and Cloudflare only; it does not cover Kaggle.
 - Cuts are not snapped to musical beats (see above).
 
-Character consistency is **not guaranteed**: the documented keyframe API takes no seed and no reference image, so
-every keyframe repeats the same style and character text and hopes. The reference sheet is for your eyes only.
+**Models.** The script stage's text model is `gemini-3.5-flash-lite` by default; set `"text_model":
+"gemini-3.8-flash"` in `storyboard.json` to use Flash instead (`EXPERIMENTS.md` E2 explains the default). `make smoke`
+uses the storyboard's text and keyframe models.
+
+**Keyframes and the character.** The default keyframe model is `flux-2-klein-4b` (`keyframe_model` in
+`storyboard.json`; `flux-1-schnell` remains available). It makes 1280x704 keyframes with a per-shot seed. Set
+`character.reference_image` to an approved image of the character (a path in the repository, such as
+`assets/character_reference.jpg`) and every shot keyframe is conditioned on it. It must be inside the repository (it
+is uploaded to Cloudflare) and must stay there, because later stages check keyframes against it. Images over 511 px,
+rotated (EXIF) or not plain RGB JPEG/PNG are converted before sending. A storyboard without `keyframe_model` uses
+klein, so switching an older project regenerates its keyframes and clips. With a reference image, no reference sheet is generated; without one, a sheet is made for your eyes
+only. Changing the reference image regenerates every keyframe (and so every clip). `runs.jsonl` records the neurons
+each klein call used (`neurons`, from Cloudflare's `cf-ai-neurons` header). Character consistency is still **not
+guaranteed**: review the keyframes.
 
 ## Layout
 
