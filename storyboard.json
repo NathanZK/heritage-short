@@ -1,60 +1,139 @@
 {
-  "title": "Morning Coffee",
-  "target_seconds": 18,
-  "assessment_rules": false,
+  "title": "The Tree That Was Always There",
+  "target_seconds": 80,
+  "assessment_rules": true,
   "keyframe_model": "flux-2-klein-4b",
   "brief": {
-    "premise": "A fictional grandmother in an Ethiopian highland village performs the traditional coffee ceremony at dawn: roasting, grinding and pouring for her neighbours.",
-    "audience": "Ethiopian diaspora families, watching on their phones",
-    "intent": "Feel the warmth and patience of a daily ritual that ties a community together."
+    "premise": "An adult remembers childhood summers at his aunt's house in Nazreth (Adama), Ethiopia, where he, his sister and his cousin climbed a small, ordinary tree in the patio after breakfast, until one morning its branches had been cut off and only the stump remained.",
+    "audience": "A general audience watching a short, personal film.",
+    "intent": "Convey the quiet loss of an ordinary place that had become part of a childhood, without explaining why the tree was cut."
   },
   "language": "English",
-  "voice": "Kore",
-  "seed": 42,
-  "style": "warm golden morning light, soft film grain, painterly realism, shallow depth of field",
+  "voice": "Algieba",
+  "seed": 1013,
+  "style": "grounded, intimate cinematic realism, natural soft morning light, muted warm colours, gentle film grain, 35mm, shallow depth of field",
   "character": {
-    "name": "Almaz",
-    "description": "a fictional elderly Ethiopian woman in a white netela shawl, with a kind lined face and silver earrings",
-    "reference_image": "assets/character_reference.jpg"
+    "name": "The three children",
+    "description": "Setting: the aunt's modest single-storey house in Nazreth (Adama), Ethiopia, with a small patio in front of it. When children appear they are always the same three Ethiopian children: the narrator, a boy of about twelve or thirteen; his sister, a girl; and their cousin, a boy; in simple everyday summer clothes, with natural, understated expressions"
   },
   "music": {
-    "prompt": "gentle solo krar and soft hand percussion, slow, warm and hopeful",
+    "prompt": "instrumental, warm, intimate, nostalgic, gently bittersweet, soft plucked acoustic strings, sparse soft piano, subtle airy textures, Ethiopian pentatonic phrasing, slow, spacious",
     "choice": {
       "candidate": 3,
-      "reason": "Preferred by the filmmaker after listening: its musical character best suits the film (seed 44)."
+      "reason": "Chosen from measured levels and spectrograms, not by listening (seed 1015): the only candidate whose shape follows the story, fuller early, a natural breath before the discovery at 49 s, sparse sustained notes through the loss, dissolving to silence by about 72 s. It ends about 4 s before the cut; to be confirmed by listening."
     }
   },
   "end_card": "Made with AI",
   "shots": [
     {
       "id": "s01",
-      "duration": 5.0,
-      "reason": "Establish the quiet dawn and the beginning of the roasting ritual.",
-      "keyframe_prompt": "Almaz kneels beside a small clay charcoal brazier at dawn, holding a flat long-handled metal pan over the glowing coals and stirring pale green raw coffee beans in it with a short metal stirrer; thin smoke rises from the beans",
-      "motion_prompt": "Subtle slow push-in on the roasting pan, rising smoke drifting gently across the frame.",
-      "narration": "Before the sun fully wakes the hills, the roasting begins.",
-      "subtitle": "Before the sun fully wakes the hills, the roasting begins.",
-      "music_cue": "Soft traditional wash of krar strings and distant morning birds."
+      "duration": 7.792,
+      "reason": "Establish a summer morning in Nazreth (Adama), Ethiopia.",
+      "keyframe_prompt": "Wide establishing view of a quiet residential street in Nazreth (Adama), Ethiopia, on a summer morning: modest single-storey houses, soft early sunlight, nobody in focus",
+      "motion_prompt": "Slow, steady pan across the quiet street in soft morning light.",
+      "narration": "When I was about twelve or thirteen, I spent my summers in Nazreth. It's called Adama now.",
+      "subtitle": "When I was about twelve or thirteen, I spent my summers in Nazreth. It's called Adama now.",
+      "music_cue": "warm, familiar opening"
     },
     {
       "id": "s02",
-      "duration": 5.0,
-      "reason": "Show the sensory detail of grinding and preparing the jebena.",
-      "keyframe_prompt": "Almaz kneels on the earth floor pounding dark roasted coffee beans: both hands grip a long wooden pestle raised mid-strike above a tall, deep, narrow traditional wooden mortar (mukecha) standing upright on the ground in front of her, with roasted beans and coarse coffee grounds visible at its rim",
-      "motion_prompt": "Gentle hand-held camera movement following the rising and falling rhythm of the pestle.",
-      "narration": "Every tap of the mortar calls the neighborhood close.",
-      "subtitle": "Every tap of the mortar calls the neighborhood close.",
-      "music_cue": "Rhythm picks up slightly with a warm ambient pulse."
+      "duration": 5.833,
+      "reason": "Introduce the aunt's house and its patio, where the summers were spent.",
+      "keyframe_prompt": "The front of the aunt's modest single-storey house, seen across the small patio in front of it, morning light, nobody in view",
+      "motion_prompt": "Gentle slow push-in towards the house across the patio.",
+      "narration": "I stayed with my aunt. My sister was there, and my cousin too.",
+      "subtitle": "I stayed with my aunt. My sister was there, and my cousin too.",
+      "music_cue": "gentle and warm"
     },
     {
       "id": "s03",
-      "duration": 5.0,
-      "reason": "Conclude with the community gathering for the final pour.",
-      "keyframe_prompt": "Almaz pours coffee in a thin stream from a traditional black clay jebena, a coffee pot with a round spherical base, a long narrow upright neck, a straight spout and a curved side handle, into small white handleless cups (sini) on a low wooden tray; smiling Ethiopian neighbours from the same highland village, men and women in white netela shawls and traditional dress, sit around her, softly blurred",
-      "motion_prompt": "Smooth pan from the pouring spout to the joyful faces of the gathered friends.",
-      "narration": "A shared cup of patience, binding us together.",
-      "subtitle": "A shared cup of patience, binding us together.",
-      "music_cue": "Harmonious choral hum fading gently into silence."
+      "duration": 6.667,
+      "reason": "Show the small, ordinary tree standing in the middle of the patio.",
+      "keyframe_prompt": "The small patio in front of the house with a small, ordinary tree standing in the middle of it: a slender trunk and modest leafy branches, not tall, no fruit, morning light",
+      "motion_prompt": "Very slow push-in on the tree in the middle of the patio; leaves stir slightly.",
+      "narration": "In the middle of the patio in front of her house, there was a small tree.",
+      "subtitle": "In the middle of the patio in front of her house, there was a small tree.",
+      "music_cue": "soft melody enters"
+    },
+    {
+      "id": "s04",
+      "duration": 7.5,
+      "reason": "Let the tree's ordinariness register: nothing remarkable about it.",
+      "keyframe_prompt": "Closer view of the small, ordinary tree in the middle of the patio: plain trunk, low modest branches, leaves catching the morning light",
+      "motion_prompt": "Slow upward tilt along the plain trunk into the branches.",
+      "narration": "It wasn't tall. It didn't bear fruit. It was just always there.",
+      "subtitle": "It wasn't tall. It didn't bear fruit. It was just always there.",
+      "music_cue": "light, unhurried"
+    },
+    {
+      "id": "s05",
+      "duration": 6.417,
+      "reason": "The children are sent outside after breakfast while the room is cleaned.",
+      "keyframe_prompt": "The three children stepping out of the house onto the patio after breakfast, morning sunlight, relaxed and unhurried, the small tree in the middle of the patio",
+      "motion_prompt": "The children walk out onto the patio; the camera follows gently at their height.",
+      "narration": "After breakfast, we were often sent outside while the room was cleaned.",
+      "subtitle": "After breakfast, we were often sent outside while the room was cleaned.",
+      "music_cue": "a little movement"
+    },
+    {
+      "id": "s06",
+      "duration": 7.083,
+      "reason": "The children take turns climbing the tree.",
+      "keyframe_prompt": "One of the three children climbing into the low branches of the small tree in the middle of the patio while the other two stand at its foot waiting their turn, morning light",
+      "motion_prompt": "The child pulls himself up onto a low branch; the others watch; slight handheld feel.",
+      "narration": "So we climbed the tree. We took turns, and sat in its branches.",
+      "subtitle": "So we climbed the tree. We took turns, and sat in its branches.",
+      "music_cue": "light, playful plucking"
+    },
+    {
+      "id": "s07",
+      "duration": 7.708,
+      "reason": "The quiet, uncomplicated pleasure of the routine.",
+      "keyframe_prompt": "Two of the three children sitting on the low branches of the small tree and the third leaning against its trunk, calm and content, soft morning light on the patio",
+      "motion_prompt": "Slow, steady drift around the tree; leaves move gently.",
+      "narration": "There was no game to it, really. It was a small, simple pleasure.",
+      "subtitle": "There was no game to it, really. It was a small, simple pleasure.",
+      "music_cue": "warm, settled"
+    },
+    {
+      "id": "s08",
+      "duration": 7.708,
+      "reason": "One morning the children come outside and find the branches cut off.",
+      "keyframe_prompt": "The three children seen from behind as they step out onto the patio in the morning, facing the middle of the patio where the tree's branches have been cut off and only a short bare stump remains",
+      "motion_prompt": "The children stop at the edge of the patio; the camera holds still behind them.",
+      "narration": "Then one morning, after breakfast, we went outside. The branches had been cut off.",
+      "subtitle": "Then one morning, after breakfast, we went outside. The branches had been cut off.",
+      "music_cue": "sparse, falling quiet"
+    },
+    {
+      "id": "s09",
+      "duration": 6.25,
+      "reason": "Hold on the stump: only the stump remains.",
+      "keyframe_prompt": "The short bare stump of the small tree in the middle of the empty patio, its branches cut off, morning light",
+      "motion_prompt": "Very slow push-in on the stump; nothing else moves.",
+      "narration": "Only the stump was left. We asked why.",
+      "subtitle": "Only the stump was left. We asked why.",
+      "music_cue": "near silence"
+    },
+    {
+      "id": "s10",
+      "duration": 7.833,
+      "reason": "The children's quiet shock and sadness; the reason is not known.",
+      "keyframe_prompt": "The three children standing quietly near the stump in the middle of the patio, subdued, restrained expressions, looking at the stump, morning light",
+      "motion_prompt": "Slow, gentle push-in on the three children; they barely move.",
+      "narration": "I don't remember the answer, or whether anyone gave one. The three of us were sad.",
+      "subtitle": "I don't remember the answer, or whether anyone gave one. The three of us were sad.",
+      "music_cue": "sparse, restrained"
+    },
+    {
+      "id": "s11",
+      "duration": 6.167,
+      "reason": "Close on the empty space where the tree used to stand.",
+      "keyframe_prompt": "The empty patio in front of the house with only the low stump in the middle where the tree used to stand, quiet morning light, nobody in view",
+      "motion_prompt": "Slow pull-back from the stump to the whole empty patio.",
+      "narration": "It had always been there. And then it wasn't.",
+      "subtitle": "It had always been there. And then it wasn't.",
+      "music_cue": "quiet resolution, fade"
     }
   ]
 }

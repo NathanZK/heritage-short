@@ -15,6 +15,14 @@ Measured values only. Rows are filled as stages are measured; fill the rest from
 | music (ACE-Step) | 1 Kaggle run, 1 batch call (3 candidates) | 99.1 runner; about 215 end to end | 99.1 (runner time, recorded by the kernel; excludes pip, git clone and `uv sync`, and is repeated on each of the 3 candidate lines in `runs.jsonl`, so do not sum it) | Kaggle GPU quota 0.33 h → 0.38 h (`kaggle quota`; about 0.05 h) | n/a (no GPU list price assumed) |
 | assemble | n/a | 18 s film, integration test: mix 0.91, 9:16 export 2.73, 16:9 export 2.41 (0.59, 3.07 and 2.82 after the framing and loudness fixes, which are not on `main`; FAILURES 25–26); radio cut 0.91 in all (main working copy, `outputs/timings.jsonl`) | n/a | n/a | n/a |
 
+**"The Tree That Was Always There" (2026-11-26; measured):**
+
+| Stage | Calls | Latency (s) | GPU seconds | Free tier used | List-price equivalent |
+|---|---|---|---|---|---|
+| narration (English) | 18 `gemini-3.8-flash-tts` attempts: 11 ok, 7 refused (HTTP 429, per-minute limit; FAILURES 28) | 62.5 for the 11 lines; 3.26–5.21 s of speech each | n/a | Gemini free tier (`cost_usd` 0.0) | not assumed (`null`) |
+| music (ACE-Step) | 1 Kaggle run, 1 batch call (3 candidates, 80 s each) | 105.2 runner; about 256 from submission to ingest | 105.2 (runner time; repeated on each of the 3 lines in `runs.jsonl`, so do not sum it) | Kaggle GPU quota 1.58 h → 1.63 h (`kaggle quota`; about 0.05 h) | n/a (no GPU list price assumed) |
+| assemble (radio cut) | local, no model call | mix 3.98, picture with subtitles and end card 14.49 (`outputs/timings.jsonl`) | n/a | n/a | n/a |
+
 Documented free allowances (checked 2026-11-25, re-check before relying on them):
 
 - Cloudflare Workers AI: 10,000 neurons per day, reset 00:00 UTC. The docs give per-tile and per-step prices for

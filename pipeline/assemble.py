@@ -4,7 +4,8 @@ Order: mix the audio once (narration on the timeline, score ducked under it by s
 two-pass loudness normalisation to -14 LUFS), then render each aspect ratio: clips cropped to fill, English
 subtitles and the AI end card burned in as PNG overlays, audio muxed. Overlays are used because common
 FFmpeg builds lack the `subtitles` and `drawtext` filters. Needs no credentials and makes no model calls.
---radio builds the radio cut instead: narration over a black picture."""
+--radio builds the radio cut instead: the same mix, subtitles and end card over a black picture (no footage), plus
+final/radio_cut.srt."""
 from __future__ import annotations
 
 import functools
@@ -13,7 +14,7 @@ import re
 from pathlib import Path
 
 from pipeline import music, narration, shots
-from pipeline.common import (DEFAULT_END_CARD, END_CARD_SECONDS, FPS, Manifest, PipelineExit, assessment_note, check_assessment, commit_with, ffmpeg, fingerprint,
+from pipeline.common import (DEFAULT_END_CARD, END_CARD_SECONDS, FPS, Manifest, PipelineExit, assessment_note, check_assessment, commit_bytes, commit_with, ffmpeg, fingerprint,
                              run_tool, sha256_file, shot_frames, shot_seconds, shot_starts, stage_main, timed)
 
 V = 1
@@ -179,18 +180,20 @@ def run_mix(ctx, sb: dict, score, total: float, dst: Path) -> None:
 
 # ------------------------------------------------------------------------ video
 
-def render_video(ctx, sb: dict, size: tuple, mix: Path, cues: list, total: float, dst: Path) -> None:
+def render_video(ctx, sb: dict, size: tuple, mix: Path, cues: list, total: float, dst: Path,
+                 footage: bool = True) -> None:
+    """footage=False (the radio cut): a black picture for the whole length instead of the shots."""
     w, h = size
     overlay_dir = ctx.path("jobs", "assemble", f"overlays-{w}x{h}", ".keep").parent
     args, parts, labels = [], [], []
-    for i, shot in enumerate(sb["shots"]):
+    for i, shot in enumerate(sb["shots"] if footage else []):
         args += ["-i", ctx.out / "shots" / f"{shot['id']}.mp4"]
         parts.append(f"[{i}:v]scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},setsar=1,fps={FPS},"
                      f"tpad=stop_mode=clone:stop_duration={shot['duration']},trim=end_frame={shot_frames(shot)},"
                      f"setpts=PTS-STARTPTS[v{i}]")
         labels.append(f"[v{i}]")
     n = len(labels)
-    args += ["-f", "lavfi", "-t", END_CARD_SECONDS, "-i", f"color=c=black:s={w}x{h}:r={FPS}"]
+    args += ["-f", "lavfi", "-t", END_CARD_SECONDS if footage else total, "-i", f"color=c=black:s={w}x{h}:r={FPS}"]
     parts.append(f"[{n}:v]setsar=1,fps={FPS}[vend]")
     parts.append(f"{''.join(labels)}[vend]concat=n={n + 1}:v=1:a=0[base]")
     cards = [(a, b, text, 0.80 if h > w else 0.88, 1.0, True) for a, b, text in cues]
@@ -216,19 +219,26 @@ def run_radio(ctx, sb: dict, manifest: Manifest) -> int:
     stale = stale_narration(ctx, sb, manifest)
     if stale:
         raise PipelineExit(1, f"narration for {', '.join(stale)} is missing or stale: python -m pipeline.narration")
-    total = sum(shot_seconds(s) for s in sb["shots"])
-    mix, dst = ctx.path("final", "radio_mix.wav"), ctx.path("final", "radio_cut.mp4")
+    srt = ctx.out / "subtitles.srt"
+    if not srt.exists():
+        raise PipelineExit(1, "subtitles.srt is missing: python -m pipeline.narration")
+    total = sum(shot_seconds(s) for s in sb["shots"]) + END_CARD_SECONDS
+    score = ctx.out / "music" / "score.wav" if music.score_ready(ctx, sb, manifest) else None
+    mix, dst, srt_copy = ctx.path("final", "radio_mix.wav"), ctx.path("final", "radio_cut.mp4"), ctx.path("final", "radio_cut.srt")
     fp = fingerprint(V, "radio", [(s["id"], s["duration"], manifest.sha(f"narration:{s['id']}")) for s in sb["shots"]],
-                     ffmpeg_version())
-    if manifest.fresh("final:radio", fp, dst):
+                     sha256_file(score) if score else None, DUCK, LOUDNORM, narration.SUBTITLE_LEAD, sha256_file(srt),
+                     sb.get("end_card", DEFAULT_END_CARD), sha256_file(find_font()), ffmpeg_version())
+    print("assemble: radio cut " + ("with the chosen score" if score else "narration only (no chosen score yet)"))
+    if manifest.fresh("final:radio", fp, dst) and srt_copy.exists() and srt_copy.read_bytes() == srt.read_bytes():
         print("assemble: radio cut up to date")
         return 0
-    timed(ctx, "assemble", "radio", "ffmpeg", lambda: run_mix(ctx, sb, None, total, mix))
-    timed(ctx, "assemble", "radio", "ffmpeg", lambda: commit_with(dst, lambda tmp: ffmpeg(
-        "-f", "lavfi", "-t", total, "-i", f"color=c=black:s=1280x720:r={FPS}", "-i", mix, "-c:v", "libx264",
-        "-c:a", "aac", "-b:a", "192k", "-pix_fmt", "yuv420p", "-t", total, *BITEXACT, "-f", "mp4", tmp)))
+    cues = narration.cues(sb, narration_durations(ctx, sb))
+    timed(ctx, "assemble", "radio", "ffmpeg", lambda: run_mix(ctx, sb, score, total, mix))
+    timed(ctx, "assemble", "radio", "ffmpeg",
+          lambda: render_video(ctx, sb, ASPECTS["16x9"], mix, cues, total, dst, footage=False))
+    commit_bytes(srt_copy, srt.read_bytes())
     manifest.record("final:radio", fp, dst)
-    print(f"assemble: wrote {dst}")
+    print(f"assemble: wrote {dst} and {srt_copy.name}")
     return 0
 
 
@@ -273,7 +283,9 @@ def main(argv=None) -> None:
     def extra(p):
         p.add_argument("--draft", action="store_true",
                        help="export without a chosen score; warn on narration overrun (never skips the assessment rules)")
-        p.add_argument("--radio", action="store_true", help="radio cut: narration over a black picture")
+        p.add_argument("--radio", action="store_true",
+                       help="radio cut: narration, the chosen score (if any), burned-in subtitles and the end card "
+                            "over a black picture, plus an .srt")
     stage_main(run, __doc__, only_mode="error", extra_args=extra, argv=argv)
 
 

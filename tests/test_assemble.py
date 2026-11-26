@@ -232,8 +232,100 @@ def test_radio_cut_needs_only_narration(tmp_path):
     assemble.run(ctx, sb, NS(draft=False, radio=True))
     by_type, seconds = streams(ctx.out / "final" / "radio_cut.mp4")
     assert "audio" in by_type and by_type["video"]["width"] == 1280
-    assert seconds == pytest.approx(13.5, abs=0.2)
+    assert seconds == pytest.approx(13.5 + 3.0, abs=0.2), "the shots plus the end card"
     assert not (ctx.out / "final" / "film_16x9.mp4").exists()
+
+
+def test_radio_cut_carries_the_chosen_score_ducked_under_the_narration(tmp_path, capsys):
+    sb = json.loads((FIXTURES / "storyboard_3shot.json").read_text())
+    (tmp_path / "storyboard.json").write_text(json.dumps(sb))
+    ctx = Ctx(root=tmp_path, mock=True, sleep=lambda s: None)
+    narration.run(ctx, sb, NS())
+    music.run(ctx, sb, NS(draft=False, resubmit=False))
+    assemble.run(ctx, sb, NS(draft=False, radio=True))
+    assert "with the chosen score" in capsys.readouterr().out
+    radio = ctx.out / "final" / "radio_mix.wav"
+    assert rms_db(radio, 0.0, 0.15) > -60, "the score plays before the first line"
+    _, seconds = streams(ctx.out / "final" / "radio_cut.mp4")
+    assert seconds == pytest.approx(16.5, abs=0.2)
+    assert rms_db(radio, 16.0, 0.4) < rms_db(radio, 11.0, 0.4) - 6, "the score fades out over the end card"
+
+
+def test_the_radio_cut_is_rebuilt_when_the_score_arrives(tmp_path):
+    sb = json.loads((FIXTURES / "storyboard_3shot.json").read_text())
+    (tmp_path / "storyboard.json").write_text(json.dumps(sb))
+    ctx = Ctx(root=tmp_path, mock=True, sleep=lambda s: None)
+    narration.run(ctx, sb, NS())
+    assemble.run(ctx, sb, NS(draft=False, radio=True))
+    voice_only = (ctx.out / "final" / "radio_mix.wav").read_bytes()
+    music.run(ctx, sb, NS(draft=False, resubmit=False))
+    assemble.run(ctx, sb, NS(draft=False, radio=True))
+    assert (ctx.out / "final" / "radio_mix.wav").read_bytes() != voice_only
+
+
+@pytest.fixture(scope="module")
+def radio(tmp_path_factory):
+    root = tmp_path_factory.mktemp("radio")
+    sb = json.loads((FIXTURES / "storyboard_3shot.json").read_text())
+    (root / "storyboard.json").write_text(json.dumps(sb))
+    ctx = Ctx(root=root, mock=True, sleep=lambda s: None)
+    narration.run(ctx, sb, NS())
+    music.run(ctx, sb, NS(draft=False, resubmit=False))
+    assemble.run(ctx, sb, NS(draft=False, radio=True))
+    return ctx, sb
+
+
+def test_the_radio_cut_is_a_black_picture_with_the_film_format(radio):
+    ctx, sb = radio
+    by_type, seconds = streams(ctx.out / "final" / "radio_cut.mp4")
+    video, audio = by_type["video"], by_type["audio"]
+    assert (video["width"], video["height"]) == (1280, 720) and video["avg_frame_rate"] == "24/1"
+    assert audio["codec_name"] == "aac" and audio["sample_rate"] == "48000"
+    assert seconds == pytest.approx(sum(s["duration"] for s in sb["shots"]) + 3.0, abs=0.1)
+    between_lines = frame(ctx.out / "final" / "radio_cut.mp4", 3.6, (1280, 720))
+    assert mean_abs_diff(between_lines, Image.new("RGB", (1280, 720), "black")) < 2, "no footage, only black"
+
+
+def test_the_radio_cut_burns_in_the_subtitles_only_while_spoken(radio):
+    ctx, sb = radio
+    cut = ctx.out / "final" / "radio_cut.mp4"
+    cues = narration.cues(sb, assemble.narration_durations(ctx, sb))
+    for start, end, _ in cues:
+        speaking = white_pixels_in_subtitle_band(frame(cut, round((start + end) / 2, 2), (1280, 720)))
+        assert speaking > 300, f"subtitle visible at {(start + end) / 2:.2f}s"
+    for (_, end, _), (start, _, _) in zip(cues, cues[1:]):
+        gap = white_pixels_in_subtitle_band(frame(cut, round((end + start) / 2, 2), (1280, 720)))
+        assert gap < 20, "nothing between lines"
+
+
+def test_the_radio_cut_ends_with_the_end_card(radio, tmp_path):
+    ctx, sb = radio
+    cut = ctx.out / "final" / "radio_cut.mp4"
+    total = sum(s["duration"] for s in sb["shots"]) + 3.0
+    overlay = tmp_path / "o.png"
+    assemble.render_text_png(overlay, (1280, 720), sb["end_card"], 0.5, 1.6, False)
+    expected = Image.alpha_composite(Image.new("RGBA", (1280, 720), "black"), Image.open(overlay)).convert("RGB")
+    for t in (total - 2.9, total - 0.1):
+        assert mean_abs_diff(frame(cut, round(t, 2), (1280, 720)), expected) < 3, f"end card at {t:.2f}s"
+    before = frame(cut, round(total - 3.2, 2), (1280, 720))
+    assert mean_abs_diff(before, expected) > mean_abs_diff(before, Image.new("RGB", (1280, 720), "black"))
+
+
+def test_the_radio_cut_has_its_srt_alongside(radio):
+    ctx, _ = radio
+    srt = ctx.out / "final" / "radio_cut.srt"
+    assert srt.read_bytes() == (ctx.out / "subtitles.srt").read_bytes()
+
+
+def test_changing_the_end_card_rebuilds_the_radio_cut(tmp_path):
+    sb = json.loads((FIXTURES / "storyboard_3shot.json").read_text())
+    (tmp_path / "storyboard.json").write_text(json.dumps(sb))
+    ctx = Ctx(root=tmp_path, mock=True, sleep=lambda s: None)
+    narration.run(ctx, sb, NS())
+    assemble.run(ctx, sb, NS(draft=False, radio=True))
+    before = (ctx.out / "final" / "radio_cut.mp4").read_bytes()
+    assemble.run(ctx, dict(sb, end_card="Made with AI tools"), NS(draft=False, radio=True))
+    assert (ctx.out / "final" / "radio_cut.mp4").read_bytes() != before
 
 
 def rms_db(path, start, seconds):
