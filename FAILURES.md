@@ -176,5 +176,11 @@ The entries above are kept as written. Where later evidence changed them:
   reports `KernelWorkerStatus.RUNNING` and `KernelWorkerStatus.COMPLETE`; the music kernel found its job file under
   `/kaggle/input`. The output of a failed batch run, the session limit and phone verification are still unchecked.
 - **9:** still true; the CLI was installed with `uv tool` in its own Python 3.13 environment (entry 21).
-- **15:** the finding stands; the film's moving-shot approach is now Wan through Diffusers (`EXPERIMENTS.md` E6), with
+- **15:** resolved in the pipeline: the shots kernel now runs E6's Diffusers setup (`EXPERIMENTS.md` E10). The
+  finding stands for Wan's own `generate.py`, which is no longer used.
+- **23 (later entry):** fixed: `--fallback-only` makes pan-and-zoom clips with no Kaggle call.
+- **25 (later entry):** the per-shot `portrait_crop_x` is now on `main` (without entry 26's loudness change, which is
+  still open); "The Tree That Was Always There" sets it for s06 (0.65), s08 and s10 (0.72) so the cousin stays in
+  the 9:16 frame.
+- **15 (earlier note):** the finding stands; the film's moving-shot approach is now Wan through Diffusers (`EXPERIMENTS.md` E6), with
   the fallback per shot, not the fallback for every shot.

@@ -295,7 +295,8 @@ One entry per experiment: hypothesis, change, result. Aim for about ten. Back ev
   passed the pipeline's checks: 832×480, 24 fps, 121 frames, `kind: real`. Same seed and settings as E6, but not the
   same frames (mean PSNR against E6's clip 23.6 dB, first frame 41.8 dB); same framing and motion; cause not
   established. Its `runs.jsonl` line is on that branch.
-- **Not done:** the kernel is not merged; Wan has not run for "The Tree That Was Always There".
+- **Not done:** Wan has not run for "The Tree That Was Always There". The kernel used here (byte-identical to what
+  Kaggle ran, checked by re-rendering it for this run's id) is now the pipeline's shots kernel.
 
 ### E11: FFmpeg fallback film for "The Tree That Was Always There"
 - **Hypothesis:** with keyframes for all 11 shots, the pipeline can produce the complete film in both formats with no
@@ -320,14 +321,20 @@ One entry per experiment: hypothesis, change, result. Aim for about ten. Back ev
   filmmaker), 11 keyframes (E9) and a complete fallback film in 16:9 and 9:16 (E11).
 - **Moving shots: FFmpeg pan-and-zoom for all 11 shots, for now.** The production decision above makes Wan the primary
   approach, but Wan has not run for this film:
-  - the E6-based kernel is not merged (`main`'s kernel cannot run on a T4; FAILURES 15), so the fallback is the only
-    path the merged pipeline can take;
+  - when the fallback film was made, the E6-based kernel was not yet in the pipeline (the old kernel cannot run on a
+    T4; FAILURES 15). It is now (`kernels/shots_kernel.py`); the full production run has not been made;
   - the filmmaker asked for the cheap fallback preview first, to choose which shots to regenerate with Wan;
   - estimated cost (not measured): about 11 × 592.6 s + 336.4 s of setup, roughly 114 min of GPU time (about 1.9
     GPU hours of the 30 a week) in one session for all 11 shots, more with regenerations; E6 and E10 also showed
     identity drift late in a clip.
 - **The fallback film is not the intended Wan film:** its clips are labelled `kind: fallback` and named on every run;
-  `python -m pipeline.shots --retry-fallbacks` asks Wan again once the kernel is merged.
+  `python -m pipeline.shots --retry-fallbacks` asks Wan again.
+- **Planned Wan production run (estimate, not measured):** every shot is longer than 5.04 s, so all 11 ask Wan for the
+  full 121 frames; at E10's 592.6 s per shot plus 336.4 s of setup, about 6,855 s (114 min, about 1.9 GPU hours) in
+  one session, about 2.45 h if 30% of shots are regenerated once. The 9:16 crop is set per shot so the cousin stays in
+  frame in s06 (`portrait_crop_x` 0.65), s08 and s10 (0.72); the narrator then falls outside the vertical frame in
+  those three. Measured on the keyframes as the kernel prepares them, s05 and s07 would also cut the cousin at the
+  default centre crop.
 
 ## Production decision (2026-11-26)
 

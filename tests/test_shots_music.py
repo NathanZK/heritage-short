@@ -25,7 +25,7 @@ def runs(ctx, stage=None):
 
 
 def shots_args(**kw):
-    return NS(fallback=False, resubmit=False, retry_fallbacks=False, **kw)
+    return NS(**{"fallback": False, "resubmit": False, "retry_fallbacks": False, "fallback_only": False, **kw})
 
 
 @pytest.fixture
@@ -196,7 +196,7 @@ def test_a_failed_kernel_is_logged_item_by_item(real, fake_kaggle):
 def test_a_kernel_that_reports_an_error_for_one_item_logs_the_reason(real, fake_kaggle):
     fake_kaggle.scenario(mode="kernel_error")
     assert shots.run(real, sb_of(real), shots_args()) == 2
-    assert all("generate.py exited with 1" in r["error"] for r in error_lines(real, "shots"))
+    assert all("CUDA out of memory" in r["error"] for r in error_lines(real, "shots"))
 
 
 def test_a_partial_run_logs_one_success_and_the_failures(real, fake_kaggle):
@@ -232,6 +232,85 @@ def test_real_runs_ignore_mock_sidecars(real, fake_kaggle):
     shots.run(ctx, sb, shots_args())
     job = json.loads((fake_kaggle.state_dir / "dataset" / "job.json").read_text())
     assert "s01" in [i["id"] for i in job["items"]]
+
+
+# ---------------------------------------------------------------- shots, Wan frames and fallbacks
+
+@pytest.mark.parametrize("seconds,frames", [(5.0, 121), (4.0, 97), (4.5, 109), (8.0, 121), (5.05, 121),
+                                            (0.1, 5), (1 / 24, 5)])
+def test_wan_frames_cover_the_shot_up_to_the_measured_121(seconds, frames):
+    assert shots.wan_frames(seconds) == frames
+    assert frames % 4 == 1 and frames <= 121
+
+
+def test_each_shot_asks_wan_for_its_own_frame_count_and_the_e6_model(real, fake_kaggle):
+    assert shots.run(real, sb_of(real), shots_args()) == 0
+    job = json.loads((fake_kaggle.state_dir / "dataset" / "job.json").read_text())
+    assert [i["params"]["num_frames"] for i in job["items"]] == [109, 97, 121]   # 4.5 s, 4.0 s, 5.0 s
+    assert shots.MODEL == "Wan-AI/Wan2.2-TI2V-5B-Diffusers"
+    assert media_seconds(real.out / "shots" / "s02.mp4") == pytest.approx(97 / 24, abs=0.05)
+    assert sidecar(real, "s02")["kind"] == "real"
+
+
+def test_a_duration_change_resubmits_only_when_the_wan_frame_count_changes(real, fake_kaggle):
+    shots.run(real, sb_of(real), shots_args())
+    edit(real, lambda sb: sb["shots"][2].update(duration=6.0))   # 5.0 s and 6.0 s both need the full 121 frames
+    shots.run(real, sb_of(real), shots_args())
+    assert fake_kaggle.count("pushes") == 1
+    edit(real, lambda sb: sb["shots"][1].update(duration=4.5))   # 97 -> 109 frames
+    shots.run(real, sb_of(real), shots_args())
+    job = json.loads((fake_kaggle.state_dir / "dataset" / "job.json").read_text())
+    assert fake_kaggle.count("pushes") == 2 and [i["id"] for i in job["items"]] == ["s02"]
+
+
+def test_fallback_after_a_partial_run_keeps_wan_clips_and_never_logs_a_fallback_as_a_success(real, fake_kaggle,
+                                                                                         capsys):
+    fake_kaggle.scenario(mode="partial")
+    assert shots.run(real, sb_of(real), shots_args(fallback=True)) == 0
+    assert [sidecar(real, s)["kind"] for s in ("s01", "s02", "s03")] == ["real", "fallback", "fallback"]
+    assert sidecar(real, "s02")["model"] == "ffmpeg-zoompan"
+    lines = runs(real, "shots")
+    assert [(r["shot"], r["status"]) for r in lines] == [("s01", "ok"), ("s02", "error"), ("s03", "error")]
+    assert "FALLBACK clips in use (pan-and-zoom, not Wan) for s02, s03" in capsys.readouterr().out
+
+
+def test_fallback_only_makes_pan_and_zoom_clips_without_any_kaggle_call(real, fake_kaggle, capsys):
+    assert shots.run(real, sb_of(real), shots_args(fallback_only=True)) == 0
+    assert fake_kaggle.calls == []
+    assert [sidecar(real, s)["kind"] for s in ("s01", "s02", "s03")] == ["fallback"] * 3
+    assert runs(real, "shots") == []
+    assert "FALLBACK" in capsys.readouterr().out
+    assert shots.run(real, sb_of(real), shots_args()) == 0
+    assert fake_kaggle.calls == [], "fallback clips are kept until --retry-fallbacks"
+
+
+def test_fallback_only_keeps_a_wan_clip_unless_the_shot_is_named(real, fake_kaggle, capsys):
+    shots.run(real, sb_of(real), shots_args())
+    wan_sha = sidecar(real, "s01")["sha256"]
+    shots.run(real, sb_of(real), shots_args(fallback_only=True))
+    assert [sidecar(real, s)["kind"] for s in ("s01", "s02", "s03")] == ["real"] * 3
+    assert sidecar(real, "s01")["sha256"] == wan_sha
+    capsys.readouterr()
+    real.only = {"s01"}
+    assert shots.run(real, sb_of(real), shots_args(fallback_only=True)) == 0
+    assert sidecar(real, "s01")["kind"] == "fallback" and sidecar(real, "s02")["kind"] == "real"
+    assert "replacing the Wan clip for s01" in capsys.readouterr().out
+    assert fake_kaggle.count("pushes") == 1
+
+
+def test_fallback_only_cannot_be_combined_with_kaggle_options(real, fake_kaggle):
+    for extra in ({"fallback": True}, {"retry_fallbacks": True}, {"resubmit": True}):
+        with pytest.raises(PipelineExit):
+            shots.run(real, sb_of(real), shots_args(fallback_only=True, **extra))
+    assert fake_kaggle.calls == []
+
+
+def test_the_shots_command_line_offers_fallback_only(real, monkeypatch):
+    seen = {}
+    monkeypatch.setattr(shots, "run", lambda ctx, sb, args: seen.setdefault("args", args) and 0)
+    with pytest.raises(SystemExit):
+        shots.main(["--root", str(real.root), "--fallback-only"])
+    assert seen["args"].fallback_only is True
 
 
 # ---------------------------------------------------------------- music

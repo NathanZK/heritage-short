@@ -88,7 +88,8 @@
       "motion_prompt": "The child pulls himself up onto a low branch; the others watch; slight handheld feel.",
       "narration": "So we climbed the tree. We took turns, and sat in its branches.",
       "subtitle": "So we climbed the tree. We took turns, and sat in its branches.",
-      "music_cue": "light, playful plucking"
+      "music_cue": "light, playful plucking",
+      "portrait_crop_x": 0.65
     },
     {
       "id": "s07",
@@ -108,7 +109,8 @@
       "motion_prompt": "The children stop at the edge of the patio; the camera holds still behind them.",
       "narration": "Then one morning, after breakfast, we went outside. The branches had been cut off.",
       "subtitle": "Then one morning, after breakfast, we went outside. The branches had been cut off.",
-      "music_cue": "sparse, falling quiet"
+      "music_cue": "sparse, falling quiet",
+      "portrait_crop_x": 0.72
     },
     {
       "id": "s09",
@@ -129,7 +131,8 @@
       "motion_prompt": "Slow, gentle push-in on the three children; they barely move.",
       "narration": "I don't remember the answer, or whether anyone gave one. The three of us were sad.",
       "subtitle": "I don't remember the answer, or whether anyone gave one. The three of us were sad.",
-      "music_cue": "sparse, restrained"
+      "music_cue": "sparse, restrained",
+      "portrait_crop_x": 0.72
     },
     {
       "id": "s11",
