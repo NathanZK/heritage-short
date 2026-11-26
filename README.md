@@ -13,6 +13,9 @@ storyboard.json -> script -> keyframes -> narration -> shots -> music -> assembl
                              FLUX.2 klein  TTS         Wan 2.2   ACE-Step
 ```
 
+**Production walkthrough:** how the English radio cut of "The Tree That Was Always There" was made, and how to
+rebuild it without model calls: [`PRODUCTION.md`](PRODUCTION.md).
+
 ## Try it now, no credentials
 
 ```bash
@@ -87,8 +90,10 @@ dataset; confirm that on kaggle.com and delete old dataset versions when you lik
    - exit **2**: incomplete but resumable (quota used up, or Kaggle work still pending: re-run to resume);
    - exit **3**: listen to `outputs/music/candidates/` and set `music.choice` `{candidate, reason}` in `storyboard.json`;
    - exit **1**: an error (invalid storyboard, missing credential, missing prerequisite).
-5. Outputs: `outputs/final/film_9x16.mp4`, `film_16x9.mp4`; a radio cut (narration over black, for your first
-   audience test) with `python -m pipeline.assemble --radio` after the narration stage.
+5. Outputs: `outputs/final/film_9x16.mp4`, `film_16x9.mp4`; a radio cut with `python -m pipeline.assemble --radio`
+   after the narration stage (for your first audience test): the narration and, once chosen, the ducked score, with
+   burned-in English subtitles and the 3 s "Made with AI" end card over a black picture, plus
+   `outputs/final/radio_cut.srt`.
 
 Run one stage with `python -m pipeline.<script|keyframes|narration|shots|music|assemble>`. Flags: `--mock`,
 `--only SHOT_ID...` (per-shot stages), `--draft` (`run`, `music`, `assemble`: continue without a chosen score,
@@ -144,7 +149,7 @@ is not part of this repository; where the code differs from it, the code and `AR
 
 ## Known limitations
 
-- The radio cut is narration over black only; it has no placeholder music.
+- The radio cut uses the chosen score when there is one; before a choice it is narration only, with no placeholder music.
 - `list_price_usd` in `runs.jsonl` is filled only for FLUX.2 klein calls (Cloudflare reports their neurons; $0.011 per
   1,000). Gemini and Kaggle lines keep `null`, so their list-price equivalents in `COSTS.md` are filled in by hand.
 - With `flux-1-schnell`, keyframes are conditioned on text only (no seed, no reference image).

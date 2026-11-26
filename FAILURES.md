@@ -110,6 +110,24 @@ documentation before writing any integration (2026-11-25). Real run failures get
     pan-and-zoom as the per-shot fallback, and made every Wan clip subject to the filmmaker's review
     (`EXPERIMENTS.md`, "Production decision (revised after E6, 2026-11-26)"). *Status:* open.
 
+28. **Gemini TTS refused requests at the free tier's per-minute limit (English narration for "The Tree That Was
+    Always There", 2026-11-26).** HTTP 429: "limit: 3 requests per minute on Free Tier". The stage's retries wait 2 s
+    and 4 s, too short to outlast it, so it stopped at s08 after 7 lines; 7 refused attempts are logged in
+    `runs.jsonl`. *Did:* resumed with `--only` in groups of at most three, a minute apart; cached lines were not
+    regenerated. *Status:* open; the narration stage does not pace its calls.
+29. **The radio cut was narration only (found while producing the cut for "The Tree That Was Always There",
+    2026-11-26).** `assemble --radio` mixed the narration over black without the chosen score, burned-in subtitles or
+    the end card. *Did:* the radio cut is now the film without footage: the same ducked mix with the chosen score,
+    the burned-in subtitles and the 3 s "Made with AI" end card over black, plus `final/radio_cut.srt` (tests in
+    `tests/test_assemble.py`). *Status:* fixed; it stays narration only until a score is chosen.
+30. **Loudness normalisation went dynamic because of the peak limit (the same radio cut).** Pass 1 measured -16.89
+    LUFS, a range of 6.40 LU and a true peak of -2.02 dBTP. The +2.9 dB needed for -14 LUFS would lift the peak above
+    the -1 dBTP ceiling, so `loudnorm` switched to dynamic mode although the range was within its target (unlike entry
+    26). Measured on the mix: the gain varied from +2.1 to +7.1 dB between 1 s blocks, lifting quiet passages more
+    than speech. The output meets -14.0 LUFS; the true peak of the AAC-encoded cut is -0.9 dBTP. *Status:* open; the
+    fix for entry 26 does not cover this. A true-peak limiter before the gain would let the gain stay constant
+    (not tried).
+
 ## Status of the early entries (2026-11-26)
 
 The entries above are kept as written. Where later evidence changed them:

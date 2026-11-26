@@ -34,7 +34,7 @@ the code differs from it, the code and this document govern, and every differenc
   8 s; and a plan leaving fewer than 8 characters per music cue. The cue allowance costs every cue-sheet entry with
   the widest timestamps a draft within the tolerance can reach, so an accepted draft always fits the caption.
 - `check_assessment()` runs in the script output check, at the start of `run` and in `assemble`, whatever the
-  flags; `assemble --radio` (narration over black, never a film export) does not run it.
+  flags; `assemble --radio` (a black picture, never a film export) does not run it.
 - Neither `target_seconds` nor `assessment_rules` is in any fingerprint: changing them regenerates nothing.
 
 ## Caching and invalidation
@@ -120,7 +120,9 @@ these fallback clips stand in for any shot Wan does not deliver usably. The musi
 - Subtitles and end card are PNG overlays (the stock FFmpeg lacks `subtitles` and `drawtext`); Latin text only.
 - Cuts are not beat-snapped; the score's shape comes only from the cue sheet in the caption.
 - One score's caption bounds the film's length: about 135 s with a very short `music.prompt`, less as it grows.
-- The radio cut has no placeholder music: narration over black only.
+- The radio cut is the film without footage: the same mix (the chosen score, ducked, when there is one; before a
+  choice, narration only, with no placeholder music), burned-in subtitles and end card over a black picture, and
+  `final/radio_cut.srt` beside it.
 - `list_price_usd` is set only for klein calls (neurons from `cf-ai-neurons` × $0.011/1,000); elsewhere it is `null`
   and list-price equivalents in `COSTS.md` are filled in by hand. `cost_usd` stays the amount billed (0.0 on the free tier).
 - The generated reference sheet conditions nothing; only `character.reference_image` does (klein only).
@@ -140,7 +142,7 @@ these fallback clips stand in for any shot Wan does not deliver usably. The musi
 | 6 | 3.1 | `runs.jsonl` holds model calls only | it also holds an error line for every Kaggle item that was in a run and did not come back usable |
 | 7 | 4, 5.6 | mix/export fingerprints use shot start offsets, a mix-constants version, the FFmpeg major version and an overlay renderer version; narration at the shot start | voice and subtitle start at shot start + 0.2 s; trims are in whole frames; fingerprints use the full first line of `ffmpeg -version`; there is no overlay renderer version (the stage `V` constant covers it) |
 | 8 | 5.3 step 5 | a kernel that cannot find its job writes an error `results.json` | it exits without writing `results.json` (the run then counts as failed or not delivered) |
-| 9 | 1, 5.6 | section 1: radio cut with an optional score; 5.6: narration only | narration only, no placeholder music |
+| 9 | 1, 5.6 | section 1: radio cut with an optional score; 5.6: narration only | the chosen score when there is one, otherwise narration only; no placeholder music |
 | 10 | 5.6 | narration may run past its shot by up to 0.3 s | no tolerance: a narration clip longer than its shot is an error (a warning under `--draft`) |
 | 11 | 3 | (not specified) | `run --only` skips assembly, because the exports need every shot |
 | 12 | 3 | `--force` backup is `storyboard.json.bak-<UTC timestamp>` | the suffix is epoch seconds |

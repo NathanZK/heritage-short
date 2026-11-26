@@ -187,6 +187,52 @@ One entry per experiment: hypothesis, change, result. Aim for about ten. Back ev
   the 2–5 min per shot this investigation aimed for.
 - **Decision:** see "Production decision (revised after E6, 2026-11-26)" below.
 
+### E7: English narration for "The Tree That Was Always There" with Gemini TTS
+- **Hypothesis:** the pipeline's Gemini TTS can speak an understated, first-person adult narration of a real
+  childhood memory, one line per shot, with every line short enough to leave a pause inside its shot (at most 8 s).
+- **Change:** a new production `storyboard.json`, "The Tree That Was Always There": 11 shots written from the
+  filmmaker's account, with no invented reason, dialogue, tree species or fruit (text: `assets/narration_en.txt`).
+  Voice `Algieba`, picked as a male voice at the filmmaker's request. The narration stage ran unchanged (`gemini-3.8-flash-tts`, plain
+  text, no style or pace control). Shot durations were then set from the measured lines (speech + 0.2 s lead + a
+  pause of 2.0 to 3.2 s, longest around the end of the routine and the discovery): 76.96 s of shots, 79.96 s with
+  the end card, assessment rules on.
+- **Result (measured):** 11 WAVs, 24 kHz mono, 3.26 to 5.21 s each, 47.51 s of speech in all; no leading silence;
+  peaks -1.0 to -2.0 dBFS. Pace 2.8 to 4.1 words per second, brisk for reflective narration. 18 calls: 11 ok
+  (62.5 s of latency in all) and 7 refused by the free tier's per-minute limit (FAILURES 28), all in `runs.jsonl`.
+  Every subtitle cue starts and ends with its spoken line.
+- **Not verified at the time:** intelligibility and tone; no speech-recognition tool was available and the audio
+  could not be played back here. The filmmaker reviewed and approved the English radio cut (2026-11-26).
+- **Decision:** keep the voice and the lines. The pace is left as is: the TTS call has no pace control, so the shots
+  carry the pauses instead.
+
+### E8: ACE-Step score for "The Tree That Was Always There"
+- **Hypothesis:** one caption (a fixed musical direction plus the per-shot cue sheet) and three seeds give three
+  comparable 80 s instrumentals, at least one of which follows the story's arc: warm and familiar, a little movement
+  in the childhood routine, sparse at the discovery, a quiet resolution.
+- **Change:** the music stage, unchanged since E4 (turbo model, 8 steps, instrumental). `music.prompt`: "instrumental,
+  warm, intimate, nostalgic, gently bittersweet, soft plucked acoustic strings, sparse soft piano, subtle airy
+  textures, Ethiopian pentatonic phrasing, slow, spacious", plus an 11-cue sheet: 481 of 512 characters. 80 s
+  (the 79.96 s film rounded up to 10 s), seeds 1013, 1014 and 1015.
+- **Result (measured):** Kaggle run `music-20261126T011125Z-6f544b`, first attempt; three 80.0 s, 48 kHz stereo WAVs
+  (`outputs/music/candidates/`); runner time 105.2 s; about 4 min from submission to ingest; Kaggle GPU quota
+  1.58 h to 1.63 h. ACE-Step again logged `use_lm=False` (`llm_initialized=False`; FAILURES 22).
+- **Comparison (measured locally; not by listening):** loudness, 2 s level envelopes, silences and spectrograms
+  against the narration timeline.
+  - Candidate 1: -16.7 LUFS, range 11.1 LU; plucked and fairly even, with a hard dropout near 40 s; as loud at the
+    discovery as in the opening.
+  - Candidate 2: -14.6 LUFS, range 7.7 LU; dense and busy throughout (-12 to -20 dB); 1.8 s of silence at the start;
+    the most likely to compete with the voice.
+  - Candidate 3: -15.6 LUFS, range 12.8 LU; fuller early, a natural dip (-40 dB) at 48 s just before the discovery
+    (49 s), then sparse sustained notes, near silence from about 72 s.
+- **Decision:** candidate 3 (seed 1015) as `music.choice`, from the measurements above; the filmmaker approved the
+  English radio cut that uses it. Its cost: the music has faded out by about 72 to 73 s, so the last line (71.0 to
+  74.5 s) ends over silence and the end card is silent.
+- **The English radio cut** (`outputs/final/radio_cut.mp4`, `radio_cut.srt`; FAILURES 29): 79.96 s, 1,919 frames at
+  24 fps, 1280x720, 48 kHz stereo AAC, decodes cleanly. -14.0 LUFS, range 5.9 LU, sample peak -1.0 dBFS, true peak
+  -0.9 dBFS (FAILURES 30). While a line is spoken the voice is 8.8 to 42 dB above the ducked score; in the pauses the
+  score comes back up by 6 to 15 dB. Each burned-in subtitle is visible from 80 ms after its cue starts until 80 ms
+  before it ends and gone 120 ms either side; "Made with AI" shows from 76.96 s to the end.
+
 ## Production decision (2026-11-26)
 
 *Superseded for moving shots by "Production decision (revised after E6, 2026-11-26)" below; the music decision here still
