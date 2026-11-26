@@ -32,7 +32,7 @@ retries, logging, assembly), **not** the quality of any model. Real generation i
 | Python 3.9+ | the pipeline | `jsonschema`, `Pillow` (installed by `make install`) |
 | `ffmpeg` + `ffprobe` | assembly | needs the `libx264` and `aac` encoders and the filters `sidechaincompress`, `loudnorm`, `adelay`, `amix`, `overlay`, `zoompan`; `brew install ffmpeg` has them |
 | a TrueType font | subtitles and end card | macOS and DejaVu locations are searched (`FONTS` in `pipeline/assemble.py`) |
-| `kaggle` CLI | shots and music (real runs only) | needs Python 3.11+, so install it separately: `pipx install kaggle` |
+| `kaggle` CLI | shots and music (real runs only) | needs Python 3.11+, so install it separately: `pipx install kaggle`, or `uv tool install kaggle --with six` (without `six`, 2.2.5 failed to start; `FAILURES.md` 21) |
 | `pytest` | tests | `make install-dev` |
 
 ## Credentials (real runs only)
@@ -94,9 +94,9 @@ Run one stage with `python -m pipeline.<script|keyframes|narration|shots|music|a
 `--only SHOT_ID...` (per-shot stages), `--draft` (`run`, `music`, `assemble`: continue without a chosen score,
 and warn instead of failing when narration overruns its shot; it never skips the assessment rules),
 `--fallback` (shots only: FFmpeg pan-and-zoom for shots Wan could not make; announced on every run and in the
-assembly, and not submitted again unless you pass `--retry-fallbacks`. It is applied after a Kaggle attempt; for the
-assessment film, which uses fallback clips for every shot, run `KAGGLE_USERNAME= python -m pipeline.shots --fallback`
-so no Kaggle job is submitted),
+assembly, and not submitted again unless you pass `--retry-fallbacks`. It is applied after a Kaggle attempt. Until the shots
+kernel runs the Diffusers setup that production uses, the stage can make only fallback clips: run
+`KAGGLE_USERNAME= python -m pipeline.shots --fallback` so no Kaggle job is submitted),
 `--force` (script: redraft, backing up `storyboard.json`), `--resubmit` (discard a pending Kaggle run).
 
 The score follows the storyboard's timeline through the cue sheet, but cuts are **not** snapped to beats: the cuts
@@ -136,8 +136,8 @@ is not part of this repository; where the code differs from it, the code and `AR
 |---|---|---|
 | M1 | raw Gemini text-response shape, 429 body, Amharic/English narration quality | `make smoke`, then listen |
 | M2 | Cloudflare response envelope and image size; `flux-1-schnell` has **no seed and no reference-image input** (`flux-2-klein-4b` has both) | `make smoke`; see keyframes |
-| M3 | Wan on a Kaggle T4: **answered.** The pipeline's kernel cannot run there (FAILURES 15); Diffusers can: one 3.4 s, 480p clip took about 40 GPU-session minutes, about 32 of them generating (`EXPERIMENTS.md` E5). The film uses the fallback | `KAGGLE_USERNAME= python -m pipeline.shots --fallback` |
-| M4 | Kaggle: mount paths, `status` text, output of failed runs, quota, phone verification | the first real shots run |
+| M3 | Wan on Kaggle T4s: **answered.** The pipeline's kernel cannot run there (FAILURES 15). Diffusers can: on two T4s, with the video model resident on one, a 5 s, 480p shot took 591.7 s after 325.0 s of setup (`EXPERIMENTS.md` E6). This is the production approach, with the fallback per shot; the shots kernel does not implement it yet. Still open: identity drift late in a clip, and whether other shots behave like s01 | until the kernel is replaced: `KAGGLE_USERNAME= python -m pipeline.shots --fallback`; review every Wan clip |
+| M4 | Kaggle: **partly verified** by the music run and the Wan experiments: `kaggle quota` shows 30 GPU hours a week; `status` reports `KernelWorkerStatus.RUNNING` and `KernelWorkerStatus.COMPLETE`; job files are found under `/kaggle/input`. Still open: the output of a failed batch run, the session limit, phone verification | the first real pipeline shots run |
 | M5 | ACE-Step on T4 and the uv setup: **verified** by the first real run (`EXPERIMENTS.md` E4). Still open: candidate order versus seeds, how well the cue sheet is followed, and why the loaded language model went unused (`use_lm=False`) | listen to the candidates; check ACE-Step's logged `use_lm` decision |
 | M6 | character consistency across shots with a reference image (one image tested: `EXPERIMENTS.md` E1) | review the keyframes; log it in `EXPERIMENTS.md` |
 | M7 | privacy: Gemini free tier, Kaggle dataset visibility | decide before using real family details |
@@ -149,6 +149,12 @@ is not part of this repository; where the code differs from it, the code and `AR
   1,000). Gemini and Kaggle lines keep `null`, so their list-price equivalents in `COSTS.md` are filled in by hand.
 - With `flux-1-schnell`, keyframes are conditioned on text only (no seed, no reference image).
 - `make smoke` checks Gemini and Cloudflare only; it does not cover Kaggle.
+- Moving shots: production uses Wan 2.2 through Diffusers on two Kaggle T4s (`EXPERIMENTS.md` E6), but the shots
+  kernel still runs Wan's own command, which cannot run on a T4 (`FAILURES.md` 15). Until it is replaced, the shots
+  stage makes fallback clips only. Measured on one shot: about 10 min per shot plus about 5 min of setup per session;
+  the face changed in the last second, and the 9:16 crop of a 480p clip is soft.
+- The 9:16 export is a centre crop of each shot, so side content, including a face near the edge, can be lost
+  (`FAILURES.md` 25).
 - Cuts are not snapped to musical beats (see above).
 
 **Models.** The script stage's text model is `gemini-3.5-flash-lite` by default; set `"text_model":
