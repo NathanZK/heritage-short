@@ -252,6 +252,19 @@ def test_each_shot_asks_wan_for_its_own_frame_count_and_the_e6_model(real, fake_
     assert sidecar(real, "s02")["kind"] == "real"
 
 
+def test_each_shot_is_sent_to_wan_with_its_own_keyframe(real, fake_kaggle):
+    from PIL import Image
+    assert shots.run(real, sb_of(real), shots_args()) == 0
+    job = json.loads((fake_kaggle.state_dir / "dataset" / "job.json").read_text())
+    mean = lambda path: Image.open(path).convert("RGB").resize((1, 1)).getpixel((0, 0))
+    for item in job["items"]:
+        assert item["inputs"] == [f"{item['id']}.jpg"]
+        sent, own = mean(fake_kaggle.state_dir / "dataset" / item["inputs"][0]), mean(real.out / "keyframes" / f"{item['id']}.jpg")
+        assert max(abs(a - b) for a, b in zip(sent, own)) < 6, f"{item['id']} was sent another shot's keyframe"
+    colours = {mean(fake_kaggle.state_dir / "dataset" / i["inputs"][0]) for i in job["items"]}
+    assert len(colours) == len(job["items"]), "the test keyframes differ, so a mix-up would show"
+
+
 def test_a_duration_change_resubmits_only_when_the_wan_frame_count_changes(real, fake_kaggle):
     shots.run(real, sb_of(real), shots_args())
     edit(real, lambda sb: sb["shots"][2].update(duration=6.0))   # 5.0 s and 6.0 s both need the full 121 frames

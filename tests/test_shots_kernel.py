@@ -223,3 +223,128 @@ def test_a_failure_while_loading_the_models_reports_every_shot(tmp_path):
     assert all(i["status"] == "error" and "needs 2 GPUs" in i["error"] and "loading" in i["error"]
                for i in results["items"])
     assert sorted(p.name for p in (tmp_path / "work").iterdir()) == ["results.json"]
+
+
+# ------------------------------------------------------------ each shot's own keyframe is Wan's image input
+
+def colour_job(tmp_path, colours):
+    """A job whose shots have visibly different keyframes, so a mix-up between shots cannot pass."""
+    inputs = tmp_path / "in"
+    folder = write_job(inputs, ids=tuple(colours))
+    job = json.loads((folder / "job.json").read_text())
+    for n, it in enumerate(job["items"]):
+        it.update(fingerprint=f"fp-{it['id']}", inputs=[f"{it['id']}.jpg"],
+                  params={"prompt": f"prompt {it['id']}", "seed": 100 + n, "num_frames": 121})
+        Image.new("RGB", (1280, 704), colours[it["id"]]).save(folder / f"{it['id']}.jpg", quality=95)
+    (folder / "job.json").write_text(json.dumps(job))
+    return inputs, folder
+
+
+COLOURS = {"s01": (200, 30, 30), "s02": (30, 200, 30), "s03": (30, 30, 200)}
+
+
+def test_each_shot_renders_from_its_own_keyframe_file(tmp_path):
+    inputs, folder = colour_job(tmp_path, COLOURS)
+    seen = []
+
+    class Recording(FakeWan):
+        def render(self, image, params, out):
+            seen.append((params["prompt"], Path(image)))
+            return super().render(image, params, out)
+    module = configured("shots", ids=tuple(COLOURS))
+    module.main(root=inputs, work=tmp_path / "work", scratch=tmp_path / "scratch", run=lambda *a, **k: Proc(),
+                sleep=lambda s: None, backend=Recording())
+    assert seen == [(f"prompt {i}", folder / f"{i}.jpg") for i in COLOURS]
+
+
+class Tensor:
+    """Stands in for a torch tensor in load_wan: every operation returns itself; nothing is NaN."""
+    def to(self, *a, **k): return self
+    def detach(self): return self
+    def float(self): return self
+    def view(self, *a): return self
+    def any(self): return False
+    def __mul__(self, other): return self
+    def __add__(self, other): return self
+
+
+def fake_wan_stack(monkeypatch, calls):
+    """Minimal torch, numpy, diffusers, transformers and huggingface_hub, recording every pipeline call."""
+    import contextlib
+    import types
+
+    class Generator:
+        def __init__(self, device):
+            self.device, self.seed = device, None
+
+        def manual_seed(self, seed):
+            self.seed = seed
+            return self
+
+    class Model:
+        config = types.SimpleNamespace(latents_mean=[0.0], latents_std=[1.0], z_dim=1)
+
+        @classmethod
+        def from_pretrained(cls, *a, **k):
+            return cls()
+
+        def to(self, *a, **k):
+            return self
+
+        def decode(self, latents, return_dict=False):
+            return [Tensor()]
+
+    class WanImageToVideoPipeline:
+        @classmethod
+        def from_pretrained(cls, *a, **k):
+            pipe = cls()
+            pipe.video_processor = types.SimpleNamespace(
+                postprocess_video=lambda video, output_type: [[f"frame{i}" for i in range(calls["frames"])]])
+            return pipe
+
+        def encode_prompt(self, **kw):
+            return Tensor(), Tensor()
+
+        def __call__(self, **kw):
+            calls["pipe"].append((type(self), kw))
+            calls["frames"] = kw["num_frames"]
+            return types.SimpleNamespace(frames=Tensor())
+
+    def export_to_video(frames, path, fps):
+        Path(path).write_bytes(b"mp4:" + str(len(frames)).encode())
+
+    cuda = types.SimpleNamespace(device_count=lambda: 2, empty_cache=lambda: None,
+                                 OutOfMemoryError=type("OutOfMemoryError", (Exception,), {}))
+    torch = types.SimpleNamespace(float16="fp16", bfloat16="bf16", device=lambda d: d, tensor=lambda v: Tensor(),
+                                  isnan=lambda t: Tensor(), isinf=lambda t: Tensor(), no_grad=contextlib.nullcontext,
+                                  Generator=Generator, cuda=cuda)
+    diffusers = types.SimpleNamespace(AutoencoderKLWan=Model, WanTransformer3DModel=Model,
+                                      WanImageToVideoPipeline=WanImageToVideoPipeline)
+    for name, mod in {"torch": torch, "numpy": types.SimpleNamespace(
+                          isfinite=lambda a: types.SimpleNamespace(all=lambda: True)),
+                      "diffusers": diffusers, "diffusers.utils": types.SimpleNamespace(export_to_video=export_to_video),
+                      "transformers": types.SimpleNamespace(UMT5EncoderModel=Model),
+                      "huggingface_hub": types.SimpleNamespace(snapshot_download=lambda *a, **k: None)}.items():
+        monkeypatch.setitem(sys.modules, name, mod)
+    return WanImageToVideoPipeline
+
+
+def test_the_real_render_passes_each_shots_prepared_keyframe_to_the_image_to_video_pipeline(tmp_path, monkeypatch):
+    calls = {"pipe": [], "frames": 0}
+    i2v = fake_wan_stack(monkeypatch, calls)
+    inputs, folder = colour_job(tmp_path, COLOURS)
+    module = configured("shots", ids=tuple(COLOURS))
+    module.main(root=inputs, work=tmp_path / "work", scratch=tmp_path / "scratch", run=lambda *a, **k: Proc(),
+                sleep=lambda s: None)   # the default backend: the real load_wan
+    results = json.loads((tmp_path / "work" / "results.json").read_text())
+    assert [i["status"] for i in results["items"]] == ["ok"] * 3, results
+    assert len(calls["pipe"]) == 3
+    for (cls, kw), shot_id in zip(calls["pipe"], COLOURS):
+        assert issubclass(cls, i2v), "image-to-video, not text-to-video"
+        expected, _ = module.prepare_image(folder / f"{shot_id}.jpg")
+        assert kw["image"].size == (832, 480) and kw["image"].tobytes() == expected.tobytes()
+        r, g, b = kw["image"].resize((1, 1)).getpixel((0, 0))
+        assert max(abs(r - COLOURS[shot_id][0]), abs(g - COLOURS[shot_id][1]), abs(b - COLOURS[shot_id][2])) < 12
+        assert kw["num_frames"] == 121 and (kw["height"], kw["width"]) == (480, 832)
+        assert kw["generator"].seed == 100 + list(COLOURS).index(shot_id)
+        assert "prompt" not in kw and kw["prompt_embeds"] is not None, "conditioned on the encoded motion prompt"
