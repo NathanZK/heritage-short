@@ -128,6 +128,42 @@ documentation before writing any integration (2026-11-25). Real run failures get
     fix for entry 26 does not cover this. A true-peak limiter before the gain would let the gain stay constant
     (not tried).
 
+31. **Klein did not produce believable children for the reference ("The Tree That Was Always There" keyframes,
+    2026-11-26).** Two attempts at a reference image with FLUX.2 [klein] 4B and no reference (`EXPERIMENTS.md` E9 steps
+    1 and 2) gave children who looked younger than the established ages (about 7 to 10, with no clear gap between the
+    narrator and the cousin) and did not read as Ethiopian; the first also made the house look stereotypically rural.
+    *Did:* the filmmaker generated the reference image with Nano, outside the pipeline, and supplied it
+    (`assets/the_tree_children_reference_photo.jpeg`). *Status:* resolved for this film; Klein still makes every
+    keyframe.
+32. **One reference image conditioned every shot (same keyframes).** `character.reference_image` was sent for every
+    shot, and the children took over s03, a shot meant to show only the tree
+    (`outputs/experiments/tree-keyframes-v1/s03_with_reference.jpg`). The reference sentence also read "the three children is the person in image 0". *Did:* a
+    per-shot `character_reference: false` (no image for that shot) and the wording "Image 0 is the visual reference
+    for …: keep the same faces, ages, builds and clothing as in image 0", with tests in `tests/test_keyframes.py`.
+    *Status:* fixed.
+33. **The reference's faces were too small to keep (same keyframes).** Cloudflare accepts input images under 512 px,
+    so the 1408×768 Nano image was shrunk to 511×279 and each face reached Klein at about 24 to 28 px. s06 kept the
+    clothing and courtyard but drifted on the faces (older, longer faces, lighter complexions, changed hair), and its
+    first try added extra children (`outputs/experiments/tree-keyframes-v2/`). The prompt was checked and did not
+    contradict the reference. *Did:* a children-only crop (451×502), sent unshrunk, faces about 67 to 76 px
+    (`assets/the_tree_children_reference_crop.jpg`). *Status:* resolved; the backgrounds now come only from text and
+    vary between shots.
+34. **Children appeared in the shots meant to show no one (same keyframes).** With the reference switched off, s01 to
+    s04, s09 and s11 still received the children's description ("When children appear they are always the same three
+    …"), and each showed 3 or 4 other children whose faces did not match ours (the filmmaker described them as
+    Asian-looking; `outputs/experiments/tree-keyframes-v3-before-fix/`). *Did:* shots marked
+    `character_reference: false` now get only the style, the new `setting` field and the shot text. *Status:* fixed; the
+    six were regenerated and show no people.
+35. **The cut-tree scenes showed an intact tree (same keyframes).** s08 and s10, conditioned on the reference, copied
+    its intact tree and its relaxed, smiling poses; s09 showed a full leafy tree
+    (`outputs/experiments/tree-keyframes-v3-before-fix/`). *Did:* s08 to s10 now describe a short, bare, knee-high stump with no trunk,
+    branches or leaves above it, s08 from behind and s10 with sad, subdued faces; the no-children `setting` text leaves
+    the tree out. *Status:* fixed for the stump. Still open: in s08 the cousin faces the camera.
+36. **Remaining artifacts in the accepted keyframes and the fallback film (`EXPERIMENTS.md` E9, E11).** In s07 the
+    narrator sits in mid-air; the reference's toy car and leaning pose recur in s05, s06, s08 and s10; the courtyard,
+    house and stump vary between shots; s06 shows reaching, not climbing; in the 9:16 export the centre crop cuts the
+    cousin out of s06, s08 and s10 (entry 25; the fix is not on `main`). *Status:* open, accepted for the preview.
+
 ## Status of the early entries (2026-11-26)
 
 The entries above are kept as written. Where later evidence changed them:

@@ -233,6 +233,102 @@ One entry per experiment: hypothesis, change, result. Aim for about ten. Back ev
   score comes back up by 6 to 15 dB. Each burned-in subtitle is visible from 80 ms after its cue starts until 80 ms
   before it ends and gone 120 ms either side; "Made with AI" shows from 76.96 s to the end.
 
+### E9: Keyframes and a consistent character reference for "The Tree That Was Always There"
+- **Hypothesis:** FLUX.2 [klein] 4B, conditioned on one shared image of the three children, can keep them recognisable
+  and consistent across the shots they appear in, while the shots of only the patio or tree show no one.
+- **Constraint:** the story is the filmmaker's real memory, so the visual direction may only use established facts:
+  an ordinary family home in a residential neighbourhood of Adama (Nazreth) with a patio in front and a modest tree in
+  its middle; three Ethiopian children, the narrator a boy of about 12 to 13, his sister a year younger, their cousin
+  about 8 to 9 and visibly younger and smaller. Construction details, a year, clothing and hairstyles were not
+  established and were removed from the prompts after review.
+- **Change, in order (25 Klein calls, all `ok` on the first attempt; `runs.jsonl` keyframe lines from
+  2026-11-26T08:38:57Z to 09:16:34Z):**
+  1. **Klein reference, attempt 1 (rejected):** s05 without a reference under the first visual direction, cropped to the
+     three children as a reference; s03 and s06 generated with it. The children read younger than intended and not
+     clearly Ethiopian, the house read as stereotypically rural, and the reference pulled the children into s03, a shot
+     meant to show only the tree (FAILURES 31, 32).
+  2. **Klein reference, attempt 2 (rejected):** the filmmaker revised the direction (an ordinary urban home, no year, no
+     invented construction or clothing, the established ages); s05 again without a reference. The setting improved; the
+     children still looked about 7 to 10, with no clear age gap, and still did not read as Ethiopian (FAILURES 31).
+  3. **A reference from another model (accepted):** two Klein attempts had not produced usable children, so the
+     filmmaker generated the reference image with **Nano**, outside this pipeline (not logged in `runs.jsonl`), and
+     supplied it: three fictional Ethiopian children with the established age relationships in an ordinary courtyard
+     with a tree (1408×768, sha256 `0d78638e…d768`, `assets/the_tree_children_reference_photo.jpeg`). Klein, the
+     pipeline's keyframe model, stayed the model for every keyframe; Nano only made the reference.
+  4. **Whole Nano image as the reference (2 s06 tries):** the clothing, sizes and courtyard carried over, but extra
+     children appeared (try 1) and the faces drifted: older, longer faces, lighter complexions, changed hair (tries 1
+     and 2; FAILURES 33). The reference reaches Klein as `input_image_0`, but shrunk to 511×279, so each face arrives
+     at about 24 to 28 px.
+  5. **Children-only crop of the Nano image (accepted):** 451×502, sent unshrunk (faces about 67 to 76 px;
+     `assets/the_tree_children_reference_crop.jpg`, sha256 `fff01c39…`). s06 then matched the reference's faces, hair,
+     complexions, ages and clothing. It is the reference for every shot that shows the children (s05, s06, s07, s08,
+     s10) and is not sent for the other six.
+  6. **The remaining shots (rejected in part):** the six shots meant to show no one each contained 3 or 4 other
+     children, whose faces did not match ours (the filmmaker described them as Asian-looking), and s08 to s10 showed an
+     intact tree instead of the stump (FAILURES 34, 35).
+  7. **Prompt and storyboard corrections (accepted):** shots marked `character_reference: false` now get neither the
+     reference nor the children's description, only the style, a new `setting` field and the shot text; s08 to s10
+     describe a short, bare, knee-high stump with nothing above it (s08 from behind, s10 sad and subdued). Only the 8
+     shots whose prompts changed were regenerated.
+- **Result (measured):** 11 keyframes, 1280×704, each the one its `runs.jsonl` line records. Five shots with the
+  children, all conditioned on the crop; six without people. 25 calls, 2,648.12 neurons, $0.0291 list-price
+  equivalent, within the free 10,000 neurons a day; 249.4 s of request latency in all.
+- **Observed (reviewed by eye, with the filmmaker):** the children keep the reference's Ethiopian appearance, faces,
+  ages and clothing in s05 to s08 and s10. Not fixed: the courtyard, house and stump look different from shot to shot;
+  in s07 the narrator sits in mid-air with no branch; the reference's toy car and leaning pose recur in s05, s06, s08
+  and s10; in s08 the cousin faces the camera; s06 shows the narrator reaching up the trunk, not climbing.
+- **Evidence:** keyframes in `outputs/keyframes/`; rejected and earlier images in `outputs/experiments/`:
+  `tree-reference/` and `tree-keyframes-v1/` (attempt 1, its crop and the s03 and s06 tests), `tree-reference-v2/`
+  (attempt 2), `tree-keyframes-v2/` (the two s06 tries with the whole Nano image), `tree-keyframes-v3-before-fix/`
+  (the 8 keyframes replaced in step 7); the rejected crop from attempt 1 is
+  `outputs/experiments/tree-keyframes-v1/children_reference_crop.jpg`. These images are git-ignored (kept locally);
+  the Nano image and the crop used for production are committed in `assets/`.
+- **Decision:** keep the crop as the reference, only on the shots that show the children.
+
+### E10: Wan smoke test of the E6-based shots kernel (separate branch, Morning Coffee s01)
+- **Hypothesis:** the shots kernel rewritten from E6 (Diffusers on Kaggle's two T4s) runs through the pipeline with
+  E6's speed.
+- **Change:** `python -m pipeline.shots --only s01` with `HERITAGE_REMOTE_TIMEOUT_S=3600`, on the uncommitted branch
+  `feat/wan-diffusers-shots-kernel`, for the earlier test film's s01 (same prompt and seed as E6, 121 frames).
+- **Result (measured, 2026-11-26):** run `shots-20261126T003829Z-30c5e0`, first attempt; setup 336.4 s, the shot
+  592.6 s (E6: 325.0 and 591.7); 16 min 22 s from submission to ingest; Kaggle GPU quota 1.32 h → 1.58 h. The clip
+  passed the pipeline's checks: 832×480, 24 fps, 121 frames, `kind: real`. Same seed and settings as E6, but not the
+  same frames (mean PSNR against E6's clip 23.6 dB, first frame 41.8 dB); same framing and motion; cause not
+  established. Its `runs.jsonl` line is on that branch.
+- **Not done:** the kernel is not merged; Wan has not run for "The Tree That Was Always There".
+
+### E11: FFmpeg fallback film for "The Tree That Was Always There"
+- **Hypothesis:** with keyframes for all 11 shots, the pipeline can produce the complete film in both formats with no
+  GPU and no model call, as a preview before deciding which shots to make with Wan.
+- **Change:** `KAGGLE_USERNAME= python -m pipeline.shots --fallback` (no Kaggle call is possible with the username
+  empty; a stand-in `kaggle` on the PATH recorded none), then `python -m pipeline.assemble`. The narration, subtitles
+  and score are the approved English ones (E7, E8), used unchanged.
+- **Result (measured):** 11 pan-and-zoom clips (`kind: fallback`), 0.63 to 0.89 s each to make.
+  `outputs/final/film_16x9.mp4` (1280×720) and `film_9x16.mp4` (720×1280): 79.96 s, 1,919 frames at 24 fps, H.264 and
+  48 kHz stereo AAC, both decode cleanly; -14.0 LUFS, loudness range 5.9 LU, peak -0.9 dBFS; assessment rules on and
+  met. The film's mix is byte-identical to the approved radio cut's mix. The exports are git-ignored (like all
+  generated media); sha256 `1d1b5197…653b3f` (16:9) and `96e205e6…8845fc` (9:16). Burned-in subtitles and the "Made with AI"
+  end card checked frame by frame. No new `runs.jsonl` line. Assembly: mix 3.97 s, 9:16 22.92 s, 16:9 21.84 s.
+- **Observed:** in 9:16 the centre crop cuts the cousin out of s06, s08 and s10 (FAILURES 25; the per-shot crop fix
+  is not on `main`). The keyframe issues listed in E9 carry over. The film is slow pan-and-zoom on stills, not
+  moving shots.
+- **Decision:** see "Production status: The Tree That Was Always There" below.
+
+## Production status: The Tree That Was Always There (2026-11-26)
+
+- **Completed and verified:** the English narration (E7), the score (E8), the English radio cut (approved by the
+  filmmaker), 11 keyframes (E9) and a complete fallback film in 16:9 and 9:16 (E11).
+- **Moving shots: FFmpeg pan-and-zoom for all 11 shots, for now.** The production decision above makes Wan the primary
+  approach, but Wan has not run for this film:
+  - the E6-based kernel is not merged (`main`'s kernel cannot run on a T4; FAILURES 15), so the fallback is the only
+    path the merged pipeline can take;
+  - the filmmaker asked for the cheap fallback preview first, to choose which shots to regenerate with Wan;
+  - estimated cost (not measured): about 11 × 592.6 s + 336.4 s of setup, roughly 114 min of GPU time (about 1.9
+    GPU hours of the 30 a week) in one session for all 11 shots, more with regenerations; E6 and E10 also showed
+    identity drift late in a clip.
+- **The fallback film is not the intended Wan film:** its clips are labelled `kind: fallback` and named on every run;
+  `python -m pipeline.shots --retry-fallbacks` asks Wan again once the kernel is merged.
+
 ## Production decision (2026-11-26)
 
 *Superseded for moving shots by "Production decision (revised after E6, 2026-11-26)" below; the music decision here still

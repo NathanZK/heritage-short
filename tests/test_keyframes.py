@@ -91,11 +91,100 @@ def test_shots_use_the_reference_at_1280x704_with_their_seeds_and_no_sheet(root)
     assert Image.open(ctx.out / "keyframes" / "s01.jpg").size == (1280, 704)
 
 
-def test_the_composed_prompt_names_the_character_in_image_0(root):
+def test_the_composed_prompt_presents_image_0_as_identity_guidance(root):
     sb = with_reference(root)
-    prompt = composed_keyframe_prompt(sb, sb["shots"][0])
-    assert prompt.startswith(f"{sb['character']['name']} is the person in image 0 ({sb['character']['description']}).")
-    assert sb["shots"][0]["keyframe_prompt"] in prompt and prompt.endswith(f"Style: {sb['style']}.")
+    c, shot = sb["character"], sb["shots"][0]
+    prompt = composed_keyframe_prompt(sb, shot)
+    assert prompt == (f"Image 0 is the visual reference for {c['name']}: keep the same faces, ages, builds and clothing "
+                      f"as in image 0. {c['description']}. {shot['keyframe_prompt']}. Style: {sb['style']}.")
+    assert "is the person in image 0" not in prompt
+
+
+def test_a_group_reference_reads_grammatically_and_keeps_the_ages():
+    sb = {"style": "realism", "character": {
+        "name": "the three children", "reference_image": REF,
+        "description": "the narrator, a boy of about twelve; his sister, a girl of about eleven; their cousin, "
+                       "a boy of about eight, visibly younger and smaller"},
+          "shots": []}
+    prompt = composed_keyframe_prompt(sb, {"keyframe_prompt": "the three children on the patio"})
+    assert prompt.startswith("Image 0 is the visual reference for the three children: keep the same faces, ages, "
+                             "builds and clothing as in image 0.")
+    assert "cousin, a boy of about eight, visibly younger and smaller" in prompt
+
+
+def test_a_shot_without_the_character_gets_no_reference_and_no_character_description(root):
+    sb = with_reference(root)
+    shot = dict(sb["shots"][0], character_reference=False)
+    prompt = composed_keyframe_prompt(sb, shot)
+    assert "image 0" not in prompt and sb["character"]["description"] not in prompt
+    assert prompt == f"{sb['style']}. {shot['keyframe_prompt']}"
+
+
+def test_a_shot_without_the_character_keeps_the_setting(root):
+    sb = dict(with_reference(root), setting="An ordinary family home with a patio in front of it")
+    shot = dict(sb["shots"][0], character_reference=False)
+    assert composed_keyframe_prompt(sb, shot) == f"{sb['style']}. {sb['setting']}. {shot['keyframe_prompt']}"
+
+
+def test_the_setting_field_does_not_change_shots_that_show_the_character(root):
+    sb = with_reference(root)
+    before = [composed_keyframe_prompt(sb, s) for s in sb["shots"]]
+    assert [composed_keyframe_prompt(dict(sb, setting="a patio"), s) for s in sb["shots"]] == before
+    del sb["character"]["reference_image"]
+    plain = [composed_keyframe_prompt(sb, s) for s in sb["shots"]]
+    assert [composed_keyframe_prompt(dict(sb, setting="a patio"), s) for s in sb["shots"]] == plain
+
+
+def test_the_schema_accepts_an_optional_setting(storyboard):
+    from pipeline.common import StoryboardError
+    validate(dict(storyboard, setting="An ordinary family home with a patio"))
+    with pytest.raises(StoryboardError):
+        validate(dict(storyboard, setting=""))
+
+
+# ------------------------------------------------------------- per-shot reference
+
+def opt_out(root, *ids):
+    return write_board(root, lambda sb: [s.update(character_reference=False) for s in sb["shots"] if s["id"] in ids])
+
+
+def test_the_schema_accepts_only_a_boolean_character_reference(storyboard):
+    from pipeline.common import StoryboardError
+    storyboard["shots"][0]["character_reference"] = False
+    validate(storyboard)
+    storyboard["shots"][0]["character_reference"] = "no"
+    with pytest.raises(StoryboardError):
+        validate(storyboard)
+
+
+def test_only_shots_that_use_the_reference_are_sent_it(root):
+    with_reference(root)
+    sb = opt_out(root, "s02")
+    fake = Recorder()
+    run(root, fake)
+    sent = {s["id"]: c["reference"] for s, c in zip(sb["shots"], fake.calls)}
+    assert sent["s01"] == (root / REF).read_bytes() and sent["s03"] == (root / REF).read_bytes()
+    assert sent["s02"] is None
+    assert len(fake.calls) == 3, "no reference sheet either: an approved reference exists"
+
+
+def test_runs_record_no_reference_for_an_opted_out_shot(root):
+    with_reference(root)
+    opt_out(root, "s02")
+    ctx = run(root, Recorder())
+    lines = {r["shot"]: r for r in read_runs(ctx.runs_path) if r["stage"] == "keyframes"}
+    assert lines["s02"]["params"]["reference_sha256"] is None
+    assert len(lines["s01"]["params"]["reference_sha256"]) == 64
+
+
+def test_a_new_reference_regenerates_only_the_shots_that_use_it(root):
+    with_reference(root)
+    opt_out(root, "s02")
+    run(root, Recorder())
+    with_reference(root, colour="blue")
+    again = Recorder()
+    run(root, again)
+    assert len(again.calls) == 2 and all(c["reference"] is not None for c in again.calls)
 
 
 def test_runs_log_the_neurons_and_request(root):

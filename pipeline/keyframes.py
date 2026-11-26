@@ -2,7 +2,7 @@
 
 Default model FLUX.2 [klein] 4B (`keyframe_model: flux-2-klein-4b`): 1280x704 keyframes, a per-shot seed, and,
 when `character.reference_image` is set, every shot keyframe conditioned on that approved image (sent as
-input_image_0). Without a reference image a character reference sheet is made for human review only.
+input_image_0), except shots marked `character_reference: false` (shots without the character). Without a reference image a character reference sheet is made for human review only.
 `keyframe_model: flux-1-schnell` keeps the original path: no seed, no size, no reference image."""
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import io
 from pathlib import Path
 
 from pipeline.common import (Manifest, PipelineExit, ProviderError, call_model, check_image, commit_bytes,
-                             composed_keyframe_prompt, fingerprint, seed_of, shot_seed, stage_main)
+                             composed_keyframe_prompt, fingerprint, seed_of, shot_seed, stage_main, uses_reference)
 from pipeline.providers import cloudflare_usage
 
 STEPS = 4             # flux-1-schnell: documented default; maximum 8 (klein's 4 steps are fixed)
@@ -78,7 +78,7 @@ def reference_fp(ctx, sb: dict) -> str:
 
 def keyframe_fp(ctx, sb: dict, shot: dict) -> str:
     if klein(sb):
-        source = reference_source(ctx, sb)
+        source = reference_source(ctx, sb) if uses_reference(sb, shot) else None
         return fingerprint(KLEIN_V, "keyframe", ctx.provider.KLEIN_MODEL, KLEIN_SIZE, shot_seed(sb, shot),
                            composed_keyframe_prompt(sb, shot), hashlib.sha256(source).hexdigest() if source else None)
     return fingerprint(V, "keyframe", ctx.provider.IMAGE_MODEL, STEPS, sb["style"], sb["character"]["description"],
@@ -130,9 +130,10 @@ def run(ctx, sb, args) -> int:
         _generate(ctx, sb, manifest, "reference", "reference", ctx.path("keyframes", "reference.jpg"),
                   reference_fp(ctx, sb), reference_prompt(sb), seed_of(sb))
     for shot in filter(ctx.wanted, sb["shots"]):   # (schnell ignores the seed)
+        own = uses_reference(sb, shot)
         _generate(ctx, sb, manifest, f"keyframe:{shot['id']}", shot["id"], ctx.path("keyframes", f"{shot['id']}.jpg"),
                   keyframe_fp(ctx, sb, shot), composed_keyframe_prompt(sb, shot), shot_seed(sb, shot),
-                  reference, reference_sha)
+                  reference if own else None, reference_sha if own else None)
     return 0
 
 

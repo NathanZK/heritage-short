@@ -60,6 +60,8 @@
       }
     },
     "end_card": {"type": "string", "minLength": 1, "maxLength": 60},
+    "setting": {"type": "string", "minLength": 1, "maxLength": 1000,
+      "description": "where the film takes place; used in the keyframe prompts of shots marked character_reference: false, which carry no character description"},
     "shots": {
       "type": "array",
       "items": {
@@ -74,7 +76,9 @@
           "motion_prompt": {"type": "string", "minLength": 1, "maxLength": 500},
           "narration": {"type": "string", "minLength": 1, "maxLength": 400},
           "subtitle": {"type": "string", "minLength": 1, "maxLength": 200},
-          "music_cue": {"type": "string", "minLength": 1, "maxLength": 80}
+          "music_cue": {"type": "string", "minLength": 1, "maxLength": 80},
+          "character_reference": {"type": "boolean",
+            "description": "false: this shot shows no character, so its keyframe gets no character.reference_image (default true)"}
         }
       }
     }

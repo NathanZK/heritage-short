@@ -124,10 +124,20 @@ def redact(text: str) -> str:
 
 # ------------------------------------------------------------------- storyboard
 
+def uses_reference(sb: dict, shot: dict) -> bool:
+    """True when this shot's keyframe is conditioned on character.reference_image. A shot without the character
+    (`character_reference: false`) gets neither the image nor the character description, only `setting`."""
+    return bool(sb["character"].get("reference_image")) and shot.get("character_reference", True)
+
+
 def composed_keyframe_prompt(sb: dict, shot: dict) -> str:
     c = sb["character"]
-    if c.get("reference_image"):    # the reference image goes to the model as image 0
-        return f"{c['name']} is the person in image 0 ({c['description']}). {shot['keyframe_prompt']}. Style: {sb['style']}."
+    if shot.get("character_reference", True) is False:   # no character in this shot: no description of them either
+        setting = f"{sb['setting']}. " if sb.get("setting") else ""
+        return f"{sb['style']}. {setting}{shot['keyframe_prompt']}"
+    if uses_reference(sb, shot):    # the reference image goes to the model as image 0
+        return (f"Image 0 is the visual reference for {c['name']}: keep the same faces, ages, builds and clothing as in "
+                f"image 0. {c['description']}. {shot['keyframe_prompt']}. Style: {sb['style']}.")
     return f"{sb['style']}. {c['description']}. {shot['keyframe_prompt']}"
 
 
