@@ -1,30 +1,39 @@
-"""Stage: shots. Wan 2.2 TI2V-5B image-to-video, run on Kaggle (see kernels/shots_kernel.py).
+"""Stage: shots. Wan 2.2 TI2V-5B image-to-video through Diffusers on Kaggle's two T4s (kernels/shots_kernel.py, the
+setup measured in EXPERIMENTS.md E6).
 
-Only shots whose clip is not fresh are submitted. --fallback fills shots that cannot be generated with an
-FFmpeg pan-and-zoom of their keyframe. A fallback clip is usable and announced on every run, but it is not
-submitted again unless you pass --retry-fallbacks, so an unchanged re-run costs no GPU time."""
+Only shots whose clip is not fresh are submitted. Each shot asks Wan for just enough frames to cover it, up to 121
+(a longer shot holds the clip's last frame). --fallback fills shots Wan did not deliver with an FFmpeg pan-and-zoom
+of their keyframe; --fallback-only makes those clips with no Kaggle call at all. A fallback clip is usable and
+announced on every run, but it is not submitted again unless you pass --retry-fallbacks, so an unchanged re-run
+costs no GPU time."""
 from __future__ import annotations
 
 import json
+import math
 
 from pipeline import kaggle, keyframes
 from pipeline.common import (FPS, Manifest, PipelineExit, ProviderError, commit_bytes, commit_file, commit_with, ffmpeg,
                              fingerprint, log_run, model_record, probe, sha256_file, shot_seed,
                              stage_main, timed)
 
-V = 1
-MODEL = "Wan-AI/Wan2.2-TI2V-5B"
-FRAME_NUM, SIZE = 121, "1280x704"
+V = 2
+MODEL = "Wan-AI/Wan2.2-TI2V-5B-Diffusers"
+MAX_FRAMES, SIZE = 121, "832x480"   # E6: 121 frames is the most measured on a T4
 NORMALISE_V = 1
-WAN_SECONDS = FRAME_NUM / FPS
+
+
+def wan_frames(seconds: float) -> int:
+    """The fewest Wan frames (4k+1, at least 5) covering the shot, capped at MAX_FRAMES."""
+    needed = max(1, round(seconds * FPS))
+    return min(MAX_FRAMES, max(5, 4 * math.ceil((needed - 1) / 4) + 1))
 
 
 def clip_fp(ctx, sb: dict, shot: dict, manifest: Manifest) -> str:
     key = f"keyframe:{shot['id']}"
     if not manifest.fresh(key, keyframes.keyframe_fp(ctx, sb, shot), ctx.out / "keyframes" / f"{shot['id']}.jpg"):
         raise PipelineExit(1, f"keyframe for {shot['id']} is missing or stale; run: python -m pipeline.keyframes")
-    return fingerprint(V, "shot", MODEL, shot_seed(sb, shot), FRAME_NUM, SIZE, shot["motion_prompt"], NORMALISE_V,
-                       manifest.sha(key))
+    return fingerprint(V, "shot", MODEL, shot_seed(sb, shot), wan_frames(shot["duration"]), SIZE,
+                       shot["motion_prompt"], NORMALISE_V, manifest.sha(key))
 
 
 def clip_state(ctx, shot_id: str, fp: str):
@@ -80,7 +89,8 @@ def build_job(ctx, sb, todo: list, fps: dict):
             "-frames:v", 1, "-q:v", 2, "-f", "image2", tmp)))
         inputs[dst.name] = dst
         items.append({"id": shot["id"], "fingerprint": fps[shot["id"]],
-                      "params": {"prompt": shot["motion_prompt"], "seed": shot_seed(sb, shot)},
+                      "params": {"prompt": shot["motion_prompt"], "seed": shot_seed(sb, shot),
+                                 "num_frames": wan_frames(shot["duration"])},
                       "inputs": [dst.name]})
     return items, inputs
 
@@ -92,7 +102,7 @@ def ingest(ctx, res, expected: dict) -> list:
         shot_id = item["id"]
         clip, side = ctx.path("shots", f"{shot_id}.mp4"), ctx.path("shots", f"{shot_id}.json")
         try:
-            commit_file(path, clip, check_clip(WAN_SECONDS, 0.5))
+            commit_file(path, clip, check_clip(item["params"]["num_frames"] / FPS, 0.5))
         except ProviderError as exc:
             res.rejected[shot_id] = str(exc)
             continue
@@ -125,15 +135,32 @@ def unfinished_run_shots(ctx, sb, manifest, skip: set, resubmit: bool) -> tuple:
     return extra, fps
 
 
+def fallback_only(ctx, sb, scope: list, fps: dict) -> None:
+    """Pan-and-zoom clips with no Kaggle call. A fresh Wan clip is replaced only for a shot named with --only."""
+    for shot in scope:
+        state = clip_state(ctx, shot["id"], fps[shot["id"]])
+        if state == "fallback" or (state in ("real", "mock") and shot["id"] not in ctx.only):
+            continue
+        if state in ("real", "mock"):
+            print(f"shots: replacing the Wan clip for {shot['id']} with a fallback clip (--fallback-only --only)")
+        make_local(ctx, sb, shot, fps[shot["id"]], "fallback", "ffmpeg-zoompan")
+
+
 def run(ctx, sb, args) -> int:
     manifest = Manifest(ctx)
     scope = list(filter(ctx.wanted, sb["shots"]))
     fps = {s["id"]: clip_fp(ctx, sb, s, manifest) for s in scope}
+    only_fallback = getattr(args, "fallback_only", False)
+    if only_fallback and (args.fallback or args.retry_fallbacks or args.resubmit):
+        raise PipelineExit(1, "--fallback-only makes no Kaggle call; it cannot be combined with --fallback, "
+                              "--retry-fallbacks or --resubmit")
     fresh_kind = "mock" if ctx.mock else "real"
     todo = [s for s in scope
             if (state := clip_state(ctx, s["id"], fps[s["id"]])) != fresh_kind
             and not (state == "fallback" and not args.retry_fallbacks)]
-    if todo and ctx.mock:
+    if only_fallback:
+        fallback_only(ctx, sb, scope, fps)
+    elif todo and ctx.mock:
         for shot in todo:
             make_local(ctx, sb, shot, fps[shot["id"]], "mock", "mock-wan")
             log_run(ctx, **model_record(stage="shots", shot=shot["id"], provider="kaggle", model="mock-wan",
@@ -180,6 +207,9 @@ def main(argv=None) -> None:
         p.add_argument("--fallback", action="store_true", help="pan-and-zoom clips for shots Wan could not make")
         p.add_argument("--retry-fallbacks", action="store_true", help="try Wan again for shots that have a fallback clip")
         p.add_argument("--resubmit", action="store_true", help="discard a pending Kaggle run and submit again")
+        p.add_argument("--fallback-only", action="store_true",
+                       help="pan-and-zoom clips with no Kaggle call; replaces a Wan clip only for shots named "
+                            "with --only")
     stage_main(run, __doc__, extra_args=extra, argv=argv)
 
 

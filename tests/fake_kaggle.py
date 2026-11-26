@@ -85,14 +85,21 @@ elif cmd == "kernels output":
     if mode == "kernel_error":
         results = {"run_id": json.loads((state / "kernel.json").read_text())["run_id"], "stage": job["stage"],
                    "items": [{"id": i["id"], "status": "error", "fingerprint": i["fingerprint"],
-                              "error": "generate.py exited with 1"} for i in items]}
+                              "error": "RuntimeError: CUDA out of memory"} for i in items]}
         (dest / "results.json").write_text(json.dumps(results))
         sys.exit(0)
     results = {"run_id": "someone-else" if mode == "wrong_run" else run_id, "stage": job["stage"], "items": []}
     for item in items:
         if job["stage"] == "shots":
             out = dest / f"{item['id']}.mp4"
-            shutil.copyfile(os.environ["FAKE_KAGGLE_SHORT_CLIP" if mode == "short" else "FAKE_KAGGLE_CLIP"], out)
+            src = os.environ["FAKE_KAGGLE_SHORT_CLIP" if mode == "short" else "FAKE_KAGGLE_CLIP"]
+            frames = item["params"].get("num_frames")
+            if mode == "short" or not frames:
+                shutil.copyfile(src, out)
+            else:   # like the kernel: exactly the frames asked for
+                import subprocess
+                subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", src, "-frames:v", str(frames), "-c:v",
+                                "libx264", "-pix_fmt", "yuv420p", "-f", "mp4", str(out)], check=True)
         else:
             from pipeline import mock
             out = dest / f"{item['id']}.wav"

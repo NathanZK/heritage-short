@@ -180,6 +180,14 @@ def run_mix(ctx, sb: dict, score, total: float, dst: Path) -> None:
 
 # ------------------------------------------------------------------------ video
 
+def fill_crop(shot: dict, w: int, h: int) -> str:
+    """Scale a clip to cover w x h, then crop it. portrait_crop_x places the crop where the clip is wider than the
+    frame (the 9:16 export): 0 its left edge, 0.5 the centre, 1 its right edge. A 16:9 clip in a 16:9 frame has no
+    horizontal slack, so the setting changes nothing there."""
+    x = shot.get("portrait_crop_x", 0.5)
+    return f"scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h}:(iw-ow)*{x}:(ih-oh)/2"
+
+
 def render_video(ctx, sb: dict, size: tuple, mix: Path, cues: list, total: float, dst: Path,
                  footage: bool = True) -> None:
     """footage=False (the radio cut): a black picture for the whole length instead of the shots."""
@@ -188,7 +196,7 @@ def render_video(ctx, sb: dict, size: tuple, mix: Path, cues: list, total: float
     args, parts, labels = [], [], []
     for i, shot in enumerate(sb["shots"] if footage else []):
         args += ["-i", ctx.out / "shots" / f"{shot['id']}.mp4"]
-        parts.append(f"[{i}:v]scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},setsar=1,fps={FPS},"
+        parts.append(f"[{i}:v]{fill_crop(shot, w, h)},setsar=1,fps={FPS},"
                      f"tpad=stop_mode=clone:stop_duration={shot['duration']},trim=end_frame={shot_frames(shot)},"
                      f"setpts=PTS-STARTPTS[v{i}]")
         labels.append(f"[v{i}]")
@@ -266,8 +274,9 @@ def run(ctx, sb, args) -> int:
     cues = narration.cues(sb, narration_durations(ctx, sb))
     for name, size in ASPECTS.items():
         dst = ctx.path("final", f"film_{name}.mp4")
+        crops = [(s["id"], s.get("portrait_crop_x", 0.5)) for s in sb["shots"]] if size[0] < size[1] else None
         fp = fingerprint(V, "export", name, clip_shas, sha256_file(mix), sha256_file(srt), sb.get("end_card", DEFAULT_END_CARD),
-                         durations, font, ffmpeg_version())
+                         durations, font, ffmpeg_version(), crops)
         if manifest.fresh(f"final:{name}", fp, dst):
             print(f"assemble: {dst.name} up to date")
             continue

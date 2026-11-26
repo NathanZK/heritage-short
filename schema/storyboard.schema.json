@@ -77,6 +77,8 @@
           "narration": {"type": "string", "minLength": 1, "maxLength": 400},
           "subtitle": {"type": "string", "minLength": 1, "maxLength": 200},
           "music_cue": {"type": "string", "minLength": 1, "maxLength": 80},
+          "portrait_crop_x": {"type": "number", "minimum": 0, "maximum": 1,
+            "description": "where the 9:16 crop sits across the shot: 0 left edge, 0.5 centre (default), 1 right edge"},
           "character_reference": {"type": "boolean",
             "description": "false: this shot shows no character, so its keyframe gets no character.reference_image (default true)"}
         }
