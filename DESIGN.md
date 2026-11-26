@@ -64,6 +64,10 @@ The pipeline calls these hosted APIs and notebooks directly. It does not introdu
 
 One measured shot took about 10 minutes plus about 5 minutes of setup per GPU session, so a film of 8–12 shots is estimated at roughly 1.4–2.7 hours of GPU time. On that shot the character's face changed in the last second and the 9:16 crop was soft, so every Wan clip is reviewed before use. The pipeline's Wan kernel (Wan's own command, which cannot run on a T4) still has to be replaced with this setup (`EXPERIMENTS.md`, E4–E6 and "Production decision (revised after E6, 2026-11-26)"; `FAILURES.md` 15 and 27).
 
+**"The Tree That Was Always There" (status 2026-11-26).** The film is a personal childhood memory, told by the filmmaker as an adult. The English narration, the score and the radio cut are complete and approved. Its first complete video uses the FFmpeg pan-and-zoom fallback for all 11 shots: the E6-based Wan kernel is not merged yet, and the filmmaker asked for this cheap preview before choosing which shots to regenerate with Wan (`EXPERIMENTS.md` E11 and "Production status"). The keyframes are made with FLUX.2 [klein] 4B. Two attempts to make the children's reference image with Klein did not give believable children, so the filmmaker generated the reference with Nano and supplied it; a children-only crop of it is the reference for the five shots that show the children, which keeps their faces, ages and clothing consistent, and the six shots of only the patio, house or tree use no reference and show no people (`EXPERIMENTS.md` E9; `FAILURES.md` 31–36).
+
+**Likeness and consent.** No likeness of a real person is used in the film. The three children are fictional representations generated for the film, not portraits of the filmmaker, his sister or his cousin; no real family member's face or voice was used as a likeness, and the narration uses a prebuilt Gemini TTS voice, not a cloned voice. No consent record is therefore needed, and none is claimed (`ETHICS.md`).
+
 ## 4. Development approach
 
 Development begins with a three-shot test storyboard. This is a testing fixture, not a limit on the final film.

@@ -169,11 +169,15 @@ uses the storyboard's text and keyframe models.
 **Keyframes and the character.** The default keyframe model is `flux-2-klein-4b` (`keyframe_model` in
 `storyboard.json`; `flux-1-schnell` remains available). It makes 1280x704 keyframes with a per-shot seed. Set
 `character.reference_image` to an approved image of the character (a path in the repository, such as
-`assets/character_reference.jpg`) and every shot keyframe is conditioned on it. It must be inside the repository (it
+`assets/character_reference.jpg`) and every shot keyframe is conditioned on it, except shots marked
+`"character_reference": false` (shots without the character): those get neither the image nor the character
+description, only `style`, the optional top-level `setting` and the shot's own prompt. It must be inside the repository (it
 is uploaded to Cloudflare) and must stay there, because later stages check keyframes against it. Images over 511 px,
 rotated (EXIF) or not plain RGB JPEG/PNG are converted before sending. A storyboard without `keyframe_model` uses
 klein, so switching an older project regenerates its keyframes and clips. With a reference image, no reference sheet is generated; without one, a sheet is made for your eyes
-only. Changing the reference image regenerates every keyframe (and so every clip). `runs.jsonl` records the neurons
+only. Changing the reference image regenerates every keyframe that uses it (and so its clip). Cloudflare takes input
+images under 512 px, so a wide reference is shrunk and small faces lose detail: crop it to the character
+(`FAILURES.md` 33). `runs.jsonl` records the neurons
 each klein call used (`neurons`, from Cloudflare's `cf-ai-neurons` header). Character consistency is still **not
 guaranteed**: review the keyframes.
 
