@@ -1,0 +1,205 @@
+{
+  "run_id": "shots-20261126T100121Z-c65e05",
+  "stage": "shots",
+  "items": [
+    {
+      "id": "s01",
+      "fingerprint": "c39e4d4600e7821d",
+      "seed": 661536199,
+      "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+      "params": {
+        "prompt": "Slow, steady pan across the quiet street in soft morning light.",
+        "seed": 661536199,
+        "num_frames": 121
+      },
+      "status": "ok",
+      "file": "s01.mp4",
+      "sha256": "494cf01b8824cd3bddce9ad3d95c8c977ad58e521712ac66cf2b21c692f985cd",
+      "bytes": 971335,
+      "decode": "untiled",
+      "latency_s": 621.8,
+      "gpu_seconds": 621.8
+    },
+    {
+      "id": "s02",
+      "fingerprint": "1bdea54366b1ebd2",
+      "seed": 1046965341,
+      "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+      "params": {
+        "prompt": "Gentle slow push-in towards the house across the patio.",
+        "seed": 1046965341,
+        "num_frames": 121
+      },
+      "status": "ok",
+      "file": "s02.mp4",
+      "sha256": "7a18dec75f809a86c913a44cd283c5ebcfe4e06ec0c911d48326d122d4c32297",
+      "bytes": 831813,
+      "decode": "untiled",
+      "latency_s": 624.0,
+      "gpu_seconds": 624.0
+    },
+    {
+      "id": "s03",
+      "fingerprint": "46dc49fa6fac1814",
+      "seed": 1231052019,
+      "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+      "params": {
+        "prompt": "Very slow push-in on the tree in the middle of the patio; leaves stir slightly.",
+        "seed": 1231052019,
+        "num_frames": 121
+      },
+      "status": "ok",
+      "file": "s03.mp4",
+      "sha256": "8523da691e8efb96ff8d698194458e32b2fb3aa750145661196eeea3a5ecc0a2",
+      "bytes": 1104414,
+      "decode": "untiled",
+      "latency_s": 624.3,
+      "gpu_seconds": 624.3
+    },
+    {
+      "id": "s04",
+      "fingerprint": "85d62ab05314390b",
+      "seed": 1459933522,
+      "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+      "params": {
+        "prompt": "Slow upward tilt along the plain trunk into the branches.",
+        "seed": 1459933522,
+        "num_frames": 121
+      },
+      "status": "ok",
+      "file": "s04.mp4",
+      "sha256": "34efacafa2985154fcb62eee4e39cc9937730617aba814f9bbe5c649e72f886b",
+      "bytes": 2166475,
+      "decode": "untiled",
+      "latency_s": 623.6,
+      "gpu_seconds": 623.6
+    },
+    {
+      "id": "s05",
+      "fingerprint": "0d9e9af416023839",
+      "seed": 537133504,
+      "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+      "params": {
+        "prompt": "The children walk out onto the patio; the camera follows gently at their height.",
+        "seed": 537133504,
+        "num_frames": 121
+      },
+      "status": "ok",
+      "file": "s05.mp4",
+      "sha256": "77f5addbcde65b13498d6d80c714c7e42f056017a074a23caac7178be0910906",
+      "bytes": 1281881,
+      "decode": "untiled",
+      "latency_s": 625.0,
+      "gpu_seconds": 625.0
+    },
+    {
+      "id": "s06",
+      "fingerprint": "d826659aa8d6063e",
+      "seed": 957001830,
+      "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+      "params": {
+        "prompt": "The child pulls himself up onto a low branch; the others watch; slight handheld feel.",
+        "seed": 957001830,
+        "num_frames": 121
+      },
+      "status": "ok",
+      "file": "s06.mp4",
+      "sha256": "a0dbb329fa0c289377dce03a50f3a7261b09a77a91273bce50b3151c2bcfd068",
+      "bytes": 969418,
+      "decode": "untiled",
+      "latency_s": 624.3,
+      "gpu_seconds": 624.3
+    },
+    {
+      "id": "s07",
+      "fingerprint": "e79f5ae065991087",
+      "seed": 1309515996,
+      "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+      "params": {
+        "prompt": "Slow, steady drift around the tree; leaves move gently.",
+        "seed": 1309515996,
+        "num_frames": 121
+      },
+      "status": "ok",
+      "file": "s07.mp4",
+      "sha256": "f11a296591dece64a7616337d67ff8a07d4fb571447ddee295541ffa80a9aea2",
+      "bytes": 856920,
+      "decode": "untiled",
+      "latency_s": 624.4,
+      "gpu_seconds": 624.4
+    },
+    {
+      "id": "s08",
+      "fingerprint": "36ed99d843293d07",
+      "seed": 1588757867,
+      "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+      "params": {
+        "prompt": "The children stop at the edge of the patio; the camera holds still behind them.",
+        "seed": 1588757867,
+        "num_frames": 121
+      },
+      "status": "ok",
+      "file": "s08.mp4",
+      "sha256": "71ef472d57187e5661c183bbae36c660c3c8600430ce3c42ceaacf1e5b1e8c9b",
+      "bytes": 906931,
+      "decode": "untiled",
+      "latency_s": 623.9,
+      "gpu_seconds": 623.9
+    },
+    {
+      "id": "s09",
+      "fingerprint": "fd2251e3491b2b92",
+      "seed": 699774421,
+      "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+      "params": {
+        "prompt": "Very slow push-in on the stump; nothing else moves.",
+        "seed": 699774421,
+        "num_frames": 121
+      },
+      "status": "ok",
+      "file": "s09.mp4",
+      "sha256": "6045984097d50981956ea355a77e686cd91226df0f219aec63daf9cc02931fcf",
+      "bytes": 591721,
+      "decode": "untiled",
+      "latency_s": 623.4,
+      "gpu_seconds": 623.4
+    },
+    {
+      "id": "s10",
+      "fingerprint": "94f17404daa015f3",
+      "seed": 1232223226,
+      "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+      "params": {
+        "prompt": "Slow, gentle push-in on the three children; they barely move.",
+        "seed": 1232223226,
+        "num_frames": 121
+      },
+      "status": "ok",
+      "file": "s10.mp4",
+      "sha256": "21ec3405cb4e8cad15624756bf281cb36df1971641da382132f05909ea035cfd",
+      "bytes": 1002219,
+      "decode": "untiled",
+      "latency_s": 624.9,
+      "gpu_seconds": 624.9
+    },
+    {
+      "id": "s11",
+      "fingerprint": "8621365277614ad2",
+      "seed": 1047858312,
+      "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+      "params": {
+        "prompt": "Slow pull-back from the stump to the whole empty patio.",
+        "seed": 1047858312,
+        "num_frames": 121
+      },
+      "status": "ok",
+      "file": "s11.mp4",
+      "sha256": "552f09027e1ac41aae9ebd366271c7a0a2cef4e6a4f24b13bfb948a2f7711e70",
+      "bytes": 711054,
+      "decode": "untiled",
+      "latency_s": 623.6,
+      "gpu_seconds": 623.6
+    }
+  ],
+  "setup_s": 382.5
+}

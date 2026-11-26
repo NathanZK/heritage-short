@@ -25,9 +25,10 @@ Measured values only. Rows are filled as stages are measured; fill the rest from
 | assemble (radio cut) | local, no model call | mix 3.98, picture with subtitles and end card 14.49 (`outputs/timings.jsonl`) | n/a | n/a | n/a |
 | keyframes (`flux-2-klein-4b`, E9) | 25 ok, first attempt each: 11 in the final set, 14 rejected or replaced (reference attempts, tests and the shots corrected in FAILURES 34–35) | 4.20–19.03 (249.4 in all) | n/a | 2,648.12 neurons (104.2 without a reference, 106.6–108.84 with one), within the 10,000 a day | $0.0291 from the neurons Cloudflare reported |
 | character reference (Nano) | made by the filmmaker outside the pipeline; not logged in `runs.jsonl` | not measured | n/a | not recorded | not recorded |
-| shots (FFmpeg fallback, all 11; E11) | local, no model call | 0.63–0.89 per clip (8.22 in all), plus 0.03–0.08 per keyframe to normalise | n/a | n/a | n/a |
+| shots (FFmpeg fallback, all 11; E11; the final film) | local, no model call | 0.63–0.89 per clip (8.22 in all), plus 0.03–0.08 per keyframe to normalise | n/a | n/a | n/a |
 | assemble (film, 16:9 and 9:16; E11) | local, no model call | mix 3.97, 9:16 export 22.92, 16:9 export 21.84 | n/a | n/a | n/a |
-| shots (Wan) | not run for this film | — | — | estimate only: about 114 min of GPU time for 11 shots in one session (`EXPERIMENTS.md`, "Production status") | n/a |
+| shots (Wan, all 11, E12; experimental) | 1 Kaggle run, 11 shots | setup 382.5, shots 621.8–625.0 each (7,245.7 in the kernel); 2 h 2 min 33 s from submission to ingest | 7,245.7 (kernel time) | Kaggle GPU quota 1.63 h → 3.65 h (`kaggle quota`; about 2.02 h) | n/a (no GPU list price assumed) |
+| assemble (Wan film, 16:9 and 9:16; E12) | local, no model call | mix 3.87, 9:16 export 22.76, 16:9 export 23.26 | n/a | n/a | n/a |
 
 Documented free allowances (checked 2026-11-25, re-check before relying on them):
 

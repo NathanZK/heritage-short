@@ -315,10 +315,83 @@ One entry per experiment: hypothesis, change, result. Aim for about ten. Back ev
   moving shots.
 - **Decision:** see "Production status: The Tree That Was Always There" below.
 
+### E12: Wan production run for "The Tree That Was Always There" (all 11 shots)
+- **Hypothesis:** the merged Diffusers kernel (E6, E10) can make all 11 shots in one Kaggle session, each conditioned
+  on its own approved keyframe and `motion_prompt`, and the late-clip drift seen on one shot stays tolerable.
+- **Change:** `python -m pipeline.shots` with no fallback flags (main at `8398a17`), then `python -m pipeline.assemble`.
+  Before submitting: all 11 keyframes current, each shot's job input checked against its own keyframe, quota and
+  runtime estimated (about 1.9 GPU h).
+- **Result (measured):** run `shots-20261126T100121Z-c65e05`, submitted 10:01:20Z, ingested 12:03:53Z (2 h 2 min 33 s).
+  Setup 382.5 s, each shot 621.8 to 625.0 s, 7,245.7 s in the kernel; Kaggle GPU quota 1.63 h → 3.65 h (2.02 h). All
+  11 shots `ok` on the first attempt, untiled decode; every clip H.264, 832×480, 121 frames, 24 fps, 5.042 s, clean
+  decode, sha256 as reported; each first frame matches its own keyframe at 31.7 to 34.1 dB PSNR. Assembly (local):
+  both exports 79.958 s, 1,919 frames, 1280×720 and 720×1280, -14.0 LUFS, LRA 5.9 LU, peak -0.9 dBFS; the mix is
+  byte-identical to the approved radio cut's.
+- **Observed (reviewed frame by frame):** story-breaking late-clip drift in s02 (an adult woman walks into an empty
+  shot), s06 (extra children, distorted face), s09 (a jug appears on the stump) and s10 (the children's faces change);
+  an object sweeps through s11; faces drift in s05. Every shot is longer than its 5.04 s clip, so the last frame is
+  held for 0.8 to 2.8 s. In 9:16 the cousin stays in frame where `portrait_crop_x` is set (s06, s08, s10, until the
+  defects), but is cut out of s05 and s07. Full list: `evidence/wan-production-run-1/PRODUCTION_REVIEW.md`.
+- **Evidence:** `evidence/wan-production-run-1/` (results, job, review note, input and output hashes, summary);
+  frames, kernel log and media in `outputs/experiments/wan-production-run-1/` and `outputs/wan-production-film/`
+  (git-ignored).
+- **Decision:** not used as the final film. No shot was retried, by the filmmaker's decision; the Wan film is kept as
+  a technically successful but creatively unsuccessful experiment for this story, and the FFmpeg film (E11) is the
+  preferred final film (see "Model selection for the final film" below).
+
+### E13: Informal viewer comparison of the audio cut, the FFmpeg film and the Wan film
+- **Hypothesis:** viewers will find the Wan film's generated motion more engaging than the FFmpeg film's pan-and-zoom,
+  and the audio-only cut will show whether the narration and score land before the picture exists.
+- **Change:** the three versions (the radio cut, the FFmpeg film from E11 and the Wan film from E12) were shared with
+  two community members and reviewed by the filmmaker. This is informal feedback, not the brief's formal user tests
+  (fewer than three people; `DESIGN.md`, section 5).
+- **Result (qualitative, two viewers; not a benchmark):** the narration was called natural and the score warm. The
+  Wan film was called erratic: it has more movement, but parts need correcting, and the filmmaker saw unrelated people
+  and objects and inconsistent characters (the defects measured in E12). Several comments point at the story more
+  than the technique: one viewer asked for the tree to be one consistent, clearly defined place (audio cut and FFmpeg
+  film); the other, about the Wan film, asked for a tree children could realistically climb and for the film to show
+  how much the children enjoyed it before it is lost. Full record, kept as the filmmaker's summaries: `DESIGN.md`,
+  "Informal community feedback".
+- **Conclusion:** the feedback does not change the choice of the FFmpeg film over the Wan film ("Model selection for
+  the final film" below), and it is too small to confirm that choice either. One viewer's comment raises a gap the
+  filmmaker agrees with and that no rendering choice fixes: the storyboard may not yet establish the children's
+  attachment to the tree strongly enough before its loss.
+- **Decision:** none yet; the feedback is recorded and pending evaluation.
+
+## Model selection for the final film: FFmpeg animation over Wan (2026-11-26)
+
+The difficult decision was whether the final film should use generated video (Wan 2.2 TI2V-5B image-to-video, E12) or
+the FFmpeg pipeline that animates the approved keyframes with a slow pan-and-zoom (E11). **The FFmpeg film is the
+preferred final film. The Wan film is kept as an experiment: technically successful, creatively unsuccessful for this
+story.**
+
+| | Wan 2.2 film (E12) | FFmpeg film (E11) |
+|---|---|---|
+| Motion | generated motion (camera moves, people moving) | slow pan-and-zoom on still keyframes; no new frames generated by a model |
+| Time (measured) | 2 h 2 min 33 s from submission to ingest; 7,245.7 s in the kernel (setup 382.5 s, each shot 621.8–625.0 s) | 11 clips in 8.22 s, assembly about 49 s, on a laptop |
+| GPU (measured) | 2.02 Kaggle GPU hours | none |
+| Technical validation | all 11 clips pass (decode, 832×480, 121 frames, 24 fps); both exports valid | both exports valid |
+| Story fidelity | hallucinations and identity drift late in clips: a stranger in s02, extra children and a distorted face in s06, an object on the stump in s09, changed faces in s10, an object sweeping through s11; weaker drift in s05 and s07 | shows exactly the 11 approved keyframes: the children, compositions and the cut tree stay as approved |
+| Remaining issues | the above, held on screen for 0.8–2.8 s per shot | little motion; keyframe artifacts carried over (FAILURES 36); its 9:16 export is a centre crop that cuts the cousin out of s06, s08 and s10 (made before `portrait_crop_x`) |
+
+**Why FFmpeg:** the film's purpose is to carry one person's memory faithfully: the same three children, the ordinary
+tree, then only the stump. Wan added motion but also strangers, objects and different faces in four of the eleven
+shots, at about ten minutes of GPU time per shot. The FFmpeg film moves less but shows only approved images, takes under
+a minute and costs no GPU. FFmpeg is not better in every dimension (Wan's motion is real and its clips are technically
+sound), but it meets this film's actual requirements reliably.
+
+**What this taught us:** the best model or technique is not necessarily the most sophisticated one; it is the one that
+meets the actual requirements reliably. Generated media also has to be judged by watching it: every Wan clip passed
+the automated checks (format, decode, conditioning on its own keyframe) and four still broke the story.
+
+**The experimental Wan film** (16:9) is linked from `README.md`, "Production outputs". It is not the recommended final
+film.
+
 ## Production status: The Tree That Was Always There (2026-11-26)
 
 - **Completed and verified:** the English narration (E7), the score (E8), the English radio cut (approved by the
-  filmmaker), 11 keyframes (E9) and a complete fallback film in 16:9 and 9:16 (E11).
+  filmmaker), 11 keyframes (E9), the **FFmpeg film** in 16:9 and 9:16 (E11; the preferred final film), and the
+  **Wan film** in 16:9 and 9:16 (E12; experimental, with known visual defects).
 - **Moving shots: FFmpeg pan-and-zoom for all 11 shots, for now.** The production decision above makes Wan the primary
   approach, but Wan has not run for this film:
   - when the fallback film was made, the E6-based kernel was not yet in the pipeline (the old kernel cannot run on a

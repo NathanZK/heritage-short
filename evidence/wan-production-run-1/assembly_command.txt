@@ -1,0 +1,1 @@
+python -m pipeline.assemble   # cwd: the separate working copy used for the Wan run (repository root, main at 8398a17), 2026-11-26T12:07:34Z

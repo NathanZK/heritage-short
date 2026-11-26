@@ -13,6 +13,18 @@ storyboard.json -> script -> keyframes -> narration -> shots -> music -> assembl
                              FLUX.2 klein  TTS         Wan 2.2   ACE-Step
 ```
 
+## Production outputs (assessment deliverables)
+
+- **Preferred final film (the submission film): the FFmpeg film.** The 11 approved FLUX.2 [klein] keyframes animated
+  with FFmpeg pan-and-zoom, with the approved narration, score, subtitles and "Made with AI" end card, in 9:16 and
+  16:9 (`EXPERIMENTS.md` E11):
+  - [9:16 (vertical, main submission)](https://drive.google.com/file/d/1nz40Hn-3GaE_unl7-tyQ40A7R8aO0mmf/view?usp=drive_link) (`film_9x16.mp4`, 16,328,700 bytes, sha256 `96e205e6…8845fc`)
+  - [16:9 (horizontal)](https://drive.google.com/file/d/1aE-G6VjUhg0EBQ495f8yA8EisSnMjO3N/view?usp=drive_link) (`film_16x9.mp4`, 14,045,913 bytes, sha256 `1d1b5197…653b3f`)
+
+  The files are not in this repository (`outputs/` is git-ignored).
+- **Experimental Wan film:** [Wan 2.2 experimental film — generated in approximately 2 hours, with documented visual hallucinations and identity drift](https://drive.google.com/file/d/1S2BA5uXW6qizQxnEePUTaVjLBzrKXpJB/view?usp=sharing) (16:9). Not the recommended final film; see `EXPERIMENTS.md` E12 and
+  "Model selection for the final film".
+
 **Production walkthrough:** how the English radio cut of "The Tree That Was Always There" was made, and how to
 rebuild it without model calls: [`PRODUCTION.md`](PRODUCTION.md).
 
@@ -141,7 +153,7 @@ is not part of this repository; where the code differs from it, the code and `AR
 |---|---|---|
 | M1 | raw Gemini text-response shape, 429 body, Amharic/English narration quality | `make smoke`, then listen |
 | M2 | Cloudflare response envelope and image size; `flux-1-schnell` has **no seed and no reference-image input** (`flux-2-klein-4b` has both) | `make smoke`; see keyframes |
-| M3 | Wan on Kaggle T4s: **answered.** The pipeline's kernel cannot run there (FAILURES 15). Diffusers can: on two T4s, with the video model resident on one, a 5 s, 480p shot took 591.7 s after 325.0 s of setup (`EXPERIMENTS.md` E6). This is the production approach, with the fallback per shot, and the shots kernel now implements it (`kernels/shots_kernel.py`): a one-shot pipeline smoke test ran it on Kaggle (`EXPERIMENTS.md` E10). Still open: identity drift late in a clip, and whether other shots behave like s01; no full film has been made with it yet | `python -m pipeline.shots --only <one shot>` first; review every Wan clip |
+| M3 | Wan on Kaggle T4s: **answered.** The pipeline's kernel cannot run there (FAILURES 15). Diffusers can: on two T4s, with the video model resident on one, a 5 s, 480p shot took 591.7 s after 325.0 s of setup (`EXPERIMENTS.md` E6). This is the production approach, with the fallback per shot, and the shots kernel now implements it (`kernels/shots_kernel.py`): a one-shot pipeline smoke test ran it on Kaggle (`EXPERIMENTS.md` E10). Still open: identity drift late in a clip, and whether other shots behave like s01; one full film has been made with it, with late-clip drift in several shots (`EXPERIMENTS.md` E12) | `python -m pipeline.shots --only <one shot>` first; review every Wan clip |
 | M4 | Kaggle: **partly verified** by the music run and the Wan experiments: `kaggle quota` shows 30 GPU hours a week; `status` reports `KernelWorkerStatus.RUNNING` and `KernelWorkerStatus.COMPLETE`; job files are found under `/kaggle/input`. Still open: the output of a failed batch run, the session limit, phone verification | the first real pipeline shots run |
 | M5 | ACE-Step on T4 and the uv setup: **verified** by the first real run (`EXPERIMENTS.md` E4). Still open: candidate order versus seeds, how well the cue sheet is followed, and why the loaded language model went unused (`use_lm=False`) | listen to the candidates; check ACE-Step's logged `use_lm` decision |
 | M6 | character consistency across shots with a reference image (one image tested: `EXPERIMENTS.md` E1) | review the keyframes; log it in `EXPERIMENTS.md` |
