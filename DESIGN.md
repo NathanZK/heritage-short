@@ -60,7 +60,9 @@ Each stage uses the interface and environment prescribed by the assessment:
 
 The pipeline calls these hosted APIs and notebooks directly. It does not introduce custom model-serving infrastructure or additional deployment layers.
 
-**Production decision for the assessment film:** moving shots use the assessment's FFmpeg pan-and-zoom fallback, and the music is the filmmaker's chosen ACE-Step candidate already generated on Kaggle. Real Wan 2.2 shots (through Diffusers, not the pipeline's Wan kernel, which cannot run on a T4) and ACE-Step music were both shown to be feasible on a Kaggle T4. But one short Wan clip took a 40-minute GPU session, and every regeneration of either needs a Kaggle account, CLI and quota, and new music needs a new listening choice (`EXPERIMENTS.md`, E4, E5 and "Production decision").
+**Production decision for the assessment film (revised after E6):** moving shots are generated with Wan 2.2 TI2V-5B through Diffusers on Kaggle's two T4s: the video model in float16 on one GPU, the text encoder and the full float16 VAE on the other, at 832×480, 121 frames and 20 steps. The assessment's FFmpeg pan-and-zoom is the fallback for any shot Wan does not deliver usably. The music is the filmmaker's chosen ACE-Step candidate, already generated on Kaggle.
+
+One measured shot took about 10 minutes plus about 5 minutes of setup per GPU session, so a film of 8–12 shots is estimated at roughly 1.4–2.7 hours of GPU time. On that shot the character's face changed in the last second and the 9:16 crop was soft, so every Wan clip is reviewed before use. The pipeline's Wan kernel (Wan's own command, which cannot run on a T4) still has to be replaced with this setup (`EXPERIMENTS.md`, E4–E6 and "Production decision (revised after E6, 2026-11-26)"; `FAILURES.md` 15 and 27).
 
 ## 4. Development approach
 

@@ -130,7 +130,67 @@ One entry per experiment: hypothesis, change, result. Aim for about ten. Back ev
   clip at 480p took about 32 min of generation plus about 8 min of setup in the same GPU session.
 - **Decision:** see "Production decision" below.
 
+### E6: Wan 2.2 TI2V-5B on two Kaggle T4s, video model resident on one GPU (Run 1)
+- **Hypothesis:** E5 was slow because the video model was offloaded block by block to the CPU. With the float16 video
+  model kept whole on GPU0 and the text encoder and VAE on GPU1, a full 5 s shot (121 frames) at 20 steps would run in
+  a few minutes per shot, and a float16 VAE decode would be much faster than E5's float32 tiled decode.
+- **Change:** a standalone private Kaggle script (`heritage-short-wan-t4-run1` v1, T4 ×2, pushed
+  2026-11-25T23:33:15Z, hard limit 4500 s), outside the pipeline.
+  - Model: `Wan-AI/Wan2.2-TI2V-5B-Diffusers` (Apache 2.0), Diffusers `WanImageToVideoPipeline`.
+  - Placement: video model float16, resident on GPU0, no offloading; UMT5 text encoder bfloat16 on GPU1, freed after
+    encoding; Wan VAE (`AutoencoderKLWan`) float16 on GPU1.
+  - Decoders, from the same saved latents: (a) the full Wan VAE in float16, untiled (tiling only after an
+    out-of-memory error; none happened); (b) TAEW2.2-Super (`madebyollin/taehv` at commit `9055eee0`, MIT), float16
+    on GPU1, for comparison.
+  - Input: `outputs/keyframes/s01.jpg`, prepared as in E5 (centre crop to 1220×704, resize to 832×480).
+  - Prompt: s01's `motion_prompt`; Wan's default negative prompt; seed 661535228 (s01's shot seed).
+  - 832×480, 121 frames, 24 fps, 20 steps, guidance 5.0; scheduler from the checkpoint.
+  - Software: Python 3.13 (kernel log paths); other versions were not logged.
+- **Result (measured):** status ok, first attempt; Kaggle reported `KernelWorkerStatus.COMPLETE`. No NaN in either
+  decode.
+  - Time: 939.9 s in the notebook (15.7 min).
+    - Setup 325.0 s: environment 36.4, Wan download 157.2, TAEHV download 1.3, model load 130.1.
+    - Per shot 591.7 s: text encoding 5.7, denoising 529.2 (20 steps, 26.46 s per step, 23.69–27.44), full VAE
+      float16 decode 53.3 (55.9 for the whole phase), export 3.5.
+    - Not in the per-shot figure: saving the latents 0.6 s, and the TAEW2.2-Super decode 2.6 s plus its load and
+      export 3.5 s.
+  - Memory (nvidia-smi peaks): GPU0 13,511 MiB, during denoising; GPU1 12,627 MiB, during text encoding (8,457 MiB
+    during the VAE decode). Host RAM peak 11,585 MiB used; process RSS peak 23,238 MiB, both while loading the models.
+  - Quota: Kaggle GPU 1.05 h → 1.32 h (`kaggle quota`; 0.27 h).
+  - Clips: H.264, 832×480, 24 fps, 121 frames, 5.04 s each.
+    - Full VAE: first frame against the prepared input PSNR 34.38 dB; last frame 11.97 dB; mean frame-to-frame
+      difference 0.031.
+    - TAEW2.2-Super: first frame 32.6 dB; last frame 11.94 dB; mean frame-to-frame difference 0.029.
+    - TAEW2.2-Super against the full VAE over all 121 frames: PSNR 31.6 dB, mean absolute difference 0.0146.
+  - 9:16 crop (made locally with the assembly's crop at `portrait_crop_x` 0.65, from the uncommitted framing fix (FAILURES 25), `review/clip_*_9x16.mp4`): the crop
+    takes a 270×480 window of the 832×480 clip and scales it 2.67× to 720×1280. A Klein keyframe is scaled 1.82×.
+    Mean edge strength of one 720×1280 frame (Pillow `FIND_EDGES`, mean grey level, measured locally afterwards):
+    Wan full VAE 2.76, TAEW2.2-Super 2.70, the fallback clip of the same shot 4.62.
+- **Compared with E5 (measured):** 26.46 s per step for 121 frames against 30.04 s for 81 frames; the VAE decode took
+  53.3 s (float16, untiled, 121 frames) against 410.8 s (float32, tiled, 81 frames); the run used 0.27 h of quota
+  against 0.67 h for a shorter clip.
+- **Observed (from sampled frames; not yet judged by the filmmaker):** the motion is coherent: smoke rises, flames
+  flicker and the spoon stirs, and the background (sun, hills) stays in place, unlike E5. The camera drifts slightly
+  instead of making the slow push-in the prompt asks for. In the last second the woman's face changes: the skin is
+  darker, more hair shows and the earring is no longer visible. The two decoders look alike at full size; the 9:16
+  versions are visibly softer than the fallback.
+- **Projection (estimate, not measured):** in one GPU session, setup once and 591.7 s per shot, 8 shots would take
+  about 84 min and 12 shots about 124 min; if about 30% of shots are regenerated once (×1.3), about 108 and 159 min.
+  This assumes every shot behaves like s01 and that the measured placement fits Kaggle's two T4s every time.
+- **Not logged in `runs.jsonl`:** it ran outside the pipeline. Evidence: `outputs/experiments/wan-t4-run1/`
+  (git-ignored: both clips, the saved latents, sampled frames, `experiment.json`, the Kaggle log, `summary.json`,
+  quota readings, the script and its metadata, and the local `review/` frames and 9:16 clips).
+- **Conclusion:** E6 was about 1.7× faster per frame and step than E5 (0.22 s against 0.37 s; arithmetic on the
+  measured figures), and denoising a longer clip took 529.2 s against 1501.9 s. Placement, GPU count, frame count,
+  step count and the text encoder's device all changed together, so the cause is not isolated. The float16 VAE decoded
+  cleanly in under a minute. At about 10 min per shot it is still two to five times slower than
+  the 2–5 min per shot this investigation aimed for.
+- **Decision:** see "Production decision (revised after E6, 2026-11-26)" below.
+
 ## Production decision (2026-11-26)
+
+*Superseded for moving shots by "Production decision (revised after E6, 2026-11-26)" below; the music decision here still
+stands. Kept as written.*
 
 E4 and E5 show that real music and real moving shots are technically feasible on Kaggle's free T4s. Neither is used
 in the assessment film's production workflow:
@@ -158,11 +218,38 @@ in the assessment film's production workflow:
   (`KAGGLE_USERNAME= python -m pipeline.shots --fallback`). This was checked on a scratch copy: no Kaggle CLI call,
   three `kind: fallback` clips.
 
+## Production decision (revised after E6, 2026-11-26)
+
+- **Moving shots: Wan 2.2 TI2V-5B is the primary approach, with the FFmpeg pan-and-zoom as the per-shot fallback.**
+  - Configuration, as measured in E6: Diffusers `WanImageToVideoPipeline` on Kaggle T4 ×2; video model float16
+    resident on GPU0; UMT5 text encoder bfloat16 and Wan VAE float16 on GPU1; full Wan VAE float16 decode, untiled;
+    832×480, 121 frames (5.04 s), 24 fps, 20 steps, guidance 5.0, the shot's seed. TAEW2.2-Super is not used for
+    production clips.
+  - Fallback: any shot for which Wan does not deliver a usable clip gets the FFmpeg pan-and-zoom of its keyframe,
+    marked `kind: fallback` and named on every run (`--fallback`).
+- **Runtime limits.**
+  - Measured on one shot: 591.7 s per shot plus 325.0 s of setup per GPU session; 0.27 h of quota for one shot.
+  - Estimated for a film (E6): about 108 min for 8 shots and 159 min for 12, with one regeneration for about 30% of
+    shots.
+  - GPU0 peaked at 13,511 MiB, so larger frames or more frames per shot may not fit (not tested).
+- **Quality limits.**
+  - Tested on one shot (s01), one seed and one prompt.
+  - The character's face changed in the last second of that clip; the camera did not follow the push-in in the
+    prompt.
+  - 480p clips are soft in the 9:16 export (E6's edge measure: 2.76 against 4.62 for the fallback).
+  - Each Wan clip needs the filmmaker's review before it goes into the film.
+- **Not yet implemented.** The pipeline's shots kernel (`kernels/shots_kernel.py`) still runs Wan's official
+  `generate.py`, which cannot run on a T4 (FAILURES 15), and the E6 setup exists only as an experiment script. Until the
+  shots stage is changed to the E6 configuration, it can produce fallback clips only; use
+  `KAGGLE_USERNAME= python -m pipeline.shots --fallback` so it does not submit the old kernel (see "Known gap"
+  above).
+- **Music:** unchanged: the filmmaker's chosen candidate 3 (E4), as in the decision above.
+
 ## Ideas worth testing
 
 - Does repeating the character description in every keyframe prompt keep the character recognisable?
   (Answered for FLUX.2 [klein] 4B with a reference image in E3; FLUX.1 schnell, which takes no seed or reference
   image, drifted.)
-- Wan on a Kaggle T4: answered. The documented command cannot run there (FAILURES 15); Diffusers can, slowly (E5).
+- Wan on a Kaggle T4: answered. The documented command cannot run there (FAILURES 15); Diffusers can, slowly (E5); on two T4s with the video model resident on one, about 10 min per 5 s shot (E6).
 - Three ACE-Step candidates: which one fits the narration, and why?
 - Gemini TTS: Amharic versus English narration quality and pacing.
