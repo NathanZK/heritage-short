@@ -1,0 +1,126 @@
+{
+  "run_id": "shots-20261126T100121Z-c65e05",
+  "submitted": "2026-11-26T10:01:20Z",
+  "pushed": "2026-11-26T10:01:57Z",
+  "ingested": "2026-11-26T12:03:53Z",
+  "wall_clock_s": 7353,
+  "kernel_setup_s": 382.5,
+  "per_shot_s": {
+    "s01": 621.8,
+    "s02": 624.0,
+    "s03": 624.3,
+    "s04": 623.6,
+    "s05": 625.0,
+    "s06": 624.3,
+    "s07": 624.4,
+    "s08": 623.9,
+    "s09": 623.4,
+    "s10": 624.9,
+    "s11": 623.6
+  },
+  "kernel_total_s": 7245.7,
+  "quota_h": {
+    "before": 1.63,
+    "after": 3.65
+  },
+  "shots": {
+    "s01": {
+      "status": "ok",
+      "decode": "untiled",
+      "frames": 121,
+      "seed": 661536199
+    },
+    "s02": {
+      "status": "ok",
+      "decode": "untiled",
+      "frames": 121,
+      "seed": 1046965341
+    },
+    "s03": {
+      "status": "ok",
+      "decode": "untiled",
+      "frames": 121,
+      "seed": 1231052019
+    },
+    "s04": {
+      "status": "ok",
+      "decode": "untiled",
+      "frames": 121,
+      "seed": 1459933522
+    },
+    "s05": {
+      "status": "ok",
+      "decode": "untiled",
+      "frames": 121,
+      "seed": 537133504
+    },
+    "s06": {
+      "status": "ok",
+      "decode": "untiled",
+      "frames": 121,
+      "seed": 957001830
+    },
+    "s07": {
+      "status": "ok",
+      "decode": "untiled",
+      "frames": 121,
+      "seed": 1309515996
+    },
+    "s08": {
+      "status": "ok",
+      "decode": "untiled",
+      "frames": 121,
+      "seed": 1588757867
+    },
+    "s09": {
+      "status": "ok",
+      "decode": "untiled",
+      "frames": 121,
+      "seed": 699774421
+    },
+    "s10": {
+      "status": "ok",
+      "decode": "untiled",
+      "frames": 121,
+      "seed": 1232223226
+    },
+    "s11": {
+      "status": "ok",
+      "decode": "untiled",
+      "frames": 121,
+      "seed": 1047858312
+    }
+  },
+  "format_validation": "all 11 pass: h264 832x480, 121 frames, 24 fps, 5.042 s, clean decode, sha256 matches results.json, kind real; first frame vs prepared keyframe 31.7-34.1 dB",
+  "content_review": {
+    "s02": "an adult woman walks in and ends in close-up (shot should show nobody)",
+    "s06": "extra children appear and identities break up by the end",
+    "s09": "a yellow jug with pink contents appears on the stump; a dark shape intrudes at right",
+    "s10": "camera pushes in; the children become different, younger, lighter-skinned faces",
+    "s05": "faces drift by the end (moderate)",
+    "s11": "small stray object at the right edge late (minor)",
+    "ok": [
+      "s01",
+      "s03",
+      "s04",
+      "s07",
+      "s08"
+    ]
+  },
+  "assembled": true,
+  "assembly": {
+    "command": "python -m pipeline.assemble (cwd: repository root of the separate working copy used for the Wan run)",
+    "at": "2026-11-26T12:07Z",
+    "timings_s": {
+      "mix": 3.865,
+      "9x16": 22.756,
+      "16x9": 23.256
+    },
+    "outputs": {
+      "outputs/wan-production-film/the_tree_wan_16x9.mp4": "dda029d3ecd28c7ecad79c65d01495cb4ff4b7f68f29ba3cc5c37d1a8b9bc3bf",
+      "outputs/wan-production-film/the_tree_wan_9x16.mp4": "4d14c82f76f8414eaa63b775a58afb01afeae4ca663423e99faabd9c8c046482"
+    },
+    "validation": "both 79.958 s, 1919 frames, 24 fps, 1280x720 / 720x1280, clean decode, AAC 48 kHz stereo, -14.0 LUFS, LRA 5.9, peak -0.9 dBFS; mix byte-identical to approved radio mix; subtitles and end card checked by frame",
+    "review_note": "outputs/wan-production-film/PRODUCTION_REVIEW.md"
+  }
+}

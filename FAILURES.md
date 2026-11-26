@@ -164,6 +164,26 @@ documentation before writing any integration (2026-11-25). Real run failures get
     house and stump vary between shots; s06 shows reaching, not climbing; in the 9:16 export the centre crop cuts the
     cousin out of s06, s08 and s10 (entry 25; the fix is not on `main`). *Status:* open, accepted for the preview.
 
+37. **Late-clip drift across the Wan production film (`EXPERIMENTS.md` E12, 2026-11-26).** All 11 clips were
+    technically valid and started from their own keyframes, but late in the clip s02, s06, s09 and s10 broke the
+    story (a stranger, extra children, a jug on the stump, changed faces), s11 had an object sweep through and s05's
+    faces drifted. The assembly holds each 5.04 s clip's last frame for the rest of its shot, so the defects stay on
+    screen. The drift was already seen in E6 and E10; its cause was not diagnosed. *Did:* recorded the defects and
+    chose the FFmpeg film (E11) as the final film; the Wan film is kept as an experiment (`EXPERIMENTS.md`, "Model
+    selection for the final film"). A community viewer later described the Wan film as erratic (`DESIGN.md`, section
+    5). The lesson: technically successful generation is not the same as a usable storytelling result; every clip
+    passed the automated checks, and the problems only showed when the clips were watched. *Status:* open for Wan.
+    Options: regenerate those shots, use only the part of each clip before the drift, or cut to the keyframe still;
+    set `portrait_crop_x` for s05 and s07.
+
+38. **The tree is not one consistent place across the film (keyframes, both films).** Each keyframe is generated from
+    text, and only the children have a reference image, so the tree's size and position vary between shots and it is
+    missing from the shots of the house before it appears in the middle of the patio (`EXPERIMENTS.md` E9 noted the
+    varying courtyard, house and stump). One community viewer said the tree sometimes seemed absent from the house
+    before appearing in the middle of the scene and asked for it to be more consistent; the other found it smaller
+    than expected (`DESIGN.md`, section 5). *Status:* open, not yet changed. A candidate fix is a
+    reference image for the setting, used like the children's crop; not tried.
+
 ## Status of the early entries (2026-11-26)
 
 The entries above are kept as written. Where later evidence changed them:

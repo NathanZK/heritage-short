@@ -102,9 +102,11 @@ these clips with no Kaggle call at all; it replaces a Wan clip only for a shot n
 **Production decision (revised after E6):** moving shots come from Wan 2.2 TI2V-5B through Diffusers on Kaggle's two
 T4s (video model float16 on GPU0; text encoder and full float16 VAE on GPU1; 832×480, 121 frames, 20 steps), and
 these fallback clips stand in for any shot Wan does not deliver usably. The music is the stage's cached, chosen score
-(candidate 3). The shots kernel implements the E6 setup; it has run once through the pipeline (`EXPERIMENTS.md`
-E10), not yet for a whole film. Reasons and measurements:
-`EXPERIMENTS.md`, E4–E6 and "Production decision (revised after E6, 2026-11-26)".
+(candidate 3). The shots kernel implements the E6 setup; it has made one shot through the pipeline (`EXPERIMENTS.md`
+E10) and then the whole film (E12, with late-clip drift in several shots). Reasons and measurements:
+`EXPERIMENTS.md`, E4–E6 and "Production decision (revised after E6, 2026-11-26)". For "The Tree That Was Always
+There", the Wan film was made (E12) but the final film uses these FFmpeg clips for all 11 shots, because Wan's late-clip
+hallucinations and identity drift broke the story ("Model selection for the final film" in `EXPERIMENTS.md`).
 
 ## Known limits
 
